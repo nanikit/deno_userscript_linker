@@ -2,6 +2,7 @@ export {
   fromFileUrl,
   resolve,
 } from "https://deno.land/std@0.201.0/path/mod.ts";
+export * from "npm:rollup";
 
 // @deno-types="npm:@types/lodash-es"
 export * from "npm:lodash-es";

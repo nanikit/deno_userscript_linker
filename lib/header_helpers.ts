@@ -4,13 +4,17 @@ export function mergeHeader(main: Header, sub: Header): Header {
   const grantKey = "@grant";
   const grants = mergeAndSort(main[grantKey], sub[grantKey]);
 
+  const requireKey = "@require";
+  const requires = mergeAndSort(main[requireKey], sub[requireKey]);
+
   const resourceKey = "@resource";
   const resources = mergeAndSort(main[resourceKey], sub[resourceKey]);
 
   return {
     ...main,
-    [grantKey]: grants,
-    [resourceKey]: resources,
+    ...(requires.length ? { [requireKey]: requires } : {}),
+    ...(grants.length ? { [grantKey]: grants } : {}),
+    ...(resources.length ? { [resourceKey]: resources } : {}),
   };
 }
 

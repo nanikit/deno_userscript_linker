@@ -1,10 +1,9 @@
 import { extractUserscriptHeader, mergeHeader } from "../lib/header_helpers.ts";
-import { assertEquals, dirname, fromFileUrl, resolve } from "./deps.ts";
+import { assertEquals } from "./deps.ts";
+import { scriptPaths } from "./test_helpers.ts";
 
 Deno.test("Given user script", async (test) => {
-  const directory = dirname(fromFileUrl(import.meta.url));
-  const scriptPath = resolve(directory, "data", "example.user.ts");
-  const script = await Deno.readTextFile(scriptPath);
+  const script = await Deno.readTextFile(scriptPaths.example);
 
   await test.step("when parse the header", async (test) => {
     const parsed = extractUserscriptHeader(script);
@@ -29,8 +28,7 @@ Deno.test("Given user script", async (test) => {
   });
 
   await test.step("when append the header", async (test) => {
-    const script1Path = resolve(directory, "data", "library1.user.js");
-    const script1 = await Deno.readTextFile(script1Path);
+    const script1 = await Deno.readTextFile(scriptPaths.script1);
 
     const first = extractUserscriptHeader(script);
     const second = extractUserscriptHeader(script1);
