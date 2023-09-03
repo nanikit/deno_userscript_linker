@@ -1,0 +1,31 @@
+import { extractUserscriptHeader, mergeHeader } from "./header_helpers.ts";
+import { WebCache } from "./web_cache.ts";
+
+const cache = new WebCache();
+
+export async function makeBundleHeader(
+  id: string,
+): Promise<Record<string, string[]>> {
+  const script = await cache.getOrFetch(id);
+  if (!script) {
+    return {};
+  }
+  const header = extractUserscriptHeader(script);
+  if (!header) {
+    return {};
+  }
+
+  const resources = header["@resource"];
+  if (resources) {
+    const urls = resources.map((x) => x.split(/\s+/)[1]).filter(nonNullable);
+    const headers = await Promise.all(urls.map(makeBundleHeader));
+    const merged = headers.reduce(mergeHeader, header);
+    return merged;
+  }
+
+  return header;
+}
+
+function nonNullable<T>(value: T): value is NonNullable<T> {
+  return value !== null && value !== undefined;
+}

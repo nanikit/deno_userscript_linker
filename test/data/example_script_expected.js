@@ -12,8 +12,29 @@
 // @resource       @stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
 // @resource       react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // ==/UserScript==
+// deno-fmt-ignore-file
+// deno-lint-ignore-file
+"use strict";
 
-import { createStitches } from "@stitches/react";
+if (typeof define !== 'function') {
+  throw new Error('requirejs not found.');
+}
 
-const stitch = createStitches({ theme: {} });
+requirejs.config({
+  enforceDefine: true,
+});
+
+define('main', (require, exports, module) => {
+var react = require("@stitches/react");
+
+const stitch = react.createStitches({ theme: {} });
 console.log(stitch);
+});
+
+for (const name of ["@stitches/react"]) {
+  const body = GM_getResourceText(name);
+  define(name, Function('require', 'exports', 'module', body));
+}
+
+unsafeWindow.process = { env: { NODE_ENV: 'production' } };
+require(['main'], () => {}, console.error);
