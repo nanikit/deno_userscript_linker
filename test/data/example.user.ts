@@ -9,7 +9,7 @@
 // @grant          GM_getValue
 // @resource       @stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
 // @resource       react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
-// @resource       library1         https://library1
+// @resource       library1         file://library1.user.js
 // ==/UserScript==
 
 import { createStitches } from "@stitches/react";

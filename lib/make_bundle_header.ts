@@ -1,13 +1,18 @@
-import { extractUserscriptHeader, mergeHeader } from "./header_helpers.ts";
+import {
+  extractUserscriptHeader,
+  type Header,
+  mergeHeader,
+} from "./header_helpers.ts";
 import { WebCache } from "./web_cache.ts";
 
 const cache = new WebCache();
 
 export async function makeBundleHeader(
   id: string,
-): Promise<Record<string, string[]>> {
+): Promise<Header> {
   const script = await cache.getOrFetch(id);
   if (!script) {
+    console.warn(`Cannot get ${id}`);
     return {};
   }
   const header = extractUserscriptHeader(script);

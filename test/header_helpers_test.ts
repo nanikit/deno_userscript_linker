@@ -3,7 +3,7 @@ import { assertEquals, dirname, fromFileUrl, resolve } from "./deps.ts";
 
 Deno.test("Given user script", async (test) => {
   const directory = dirname(fromFileUrl(import.meta.url));
-  const scriptPath = resolve(directory, "data", "main_script.ts");
+  const scriptPath = resolve(directory, "data", "example.user.ts");
   const script = await Deno.readTextFile(scriptPath);
 
   await test.step("when parse the header", async (test) => {
@@ -22,14 +22,14 @@ Deno.test("Given user script", async (test) => {
         "@resource": [
           "@stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
           "react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js",
-          "library1         https://library1",
+          "library1         file://library1.user.js",
         ],
       });
     });
   });
 
   await test.step("when append the header", async (test) => {
-    const script1Path = resolve(directory, "data", "dependency1_script.js");
+    const script1Path = resolve(directory, "data", "library1.user.js");
     const script1 = await Deno.readTextFile(script1Path);
 
     const first = extractUserscriptHeader(script);
@@ -51,8 +51,8 @@ Deno.test("Given user script", async (test) => {
         ],
         "@resource": [
           "@stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
-          "library1         https://library1",
-          "library2         file://library2",
+          "library1         file://library1.user.js",
+          "library2         http://localhost:8080/library2.user.js",
           "react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js",
         ],
       });
