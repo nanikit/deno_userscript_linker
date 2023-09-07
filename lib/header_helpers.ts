@@ -8,7 +8,17 @@ export function mergeHeader(main: Header, sub: Header): Header {
   const requires = mergeAndSort(main[requireKey], sub[requireKey]);
 
   const resourceKey = "@resource";
-  const resources = mergeAndSort(main[resourceKey], sub[resourceKey]);
+  const resourceTable = [
+    ...(main[resourceKey] ?? []).map((x) => x.split(/\s+/)),
+    ...(sub[resourceKey] ?? []).map((x) => x.split(/\s+/)),
+  ];
+  const maxKeyLength = Math.max(
+    ...resourceTable.map((x) => x[0]?.length ?? -Infinity),
+  );
+  const rows = resourceTable.map((x) =>
+    `${x[0]?.padEnd(maxKeyLength)} ${x.slice(1)}`
+  );
+  const resources = mergeAndSort(rows, []);
 
   return {
     ...main,

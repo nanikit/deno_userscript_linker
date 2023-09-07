@@ -8,11 +8,14 @@
 // @author         nanikit
 // @grant          GM_getValue
 // @resource       @stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
+// @resource       react-dom        https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
 // @resource       react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // @resource       library1         file://library1.user.js
 // ==/UserScript==
 
-import { createStitches } from "@stitches/react";
+import "library1";
+import React from "react";
+import { render } from "./deps.ts";
 
-const stitch = createStitches({ theme: {} });
-console.log(stitch);
+// comment should be removed
+render(<div />, document.body);

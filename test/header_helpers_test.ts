@@ -20,6 +20,7 @@ Deno.test("Given user script", async (test) => {
         "@grant": ["GM_getValue"],
         "@resource": [
           "@stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
+          "react-dom        https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js",
           "react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js",
           "library1         file://library1.user.js",
         ],
@@ -48,10 +49,11 @@ Deno.test("Given user script", async (test) => {
           "GM_setValue",
         ],
         "@resource": [
-          "@stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
-          "library1         file://library1.user.js",
-          "library2         http://localhost:8080/library2.user.js",
-          "react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js",
+          "@stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
+          "library1        file://library1.user.js",
+          "library2        http://localhost:8080/library2.user.js",
+          "react           https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js",
+          "react-dom       https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js",
         ],
       });
     });

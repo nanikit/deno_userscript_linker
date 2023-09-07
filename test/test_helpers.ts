@@ -4,7 +4,7 @@ import { dirname, fromFileUrl, resolve, stub, toFileUrl } from "./deps.ts";
 const directory = dirname(fromFileUrl(import.meta.url));
 
 export const scriptPaths = {
-  example: resolve(directory, "data", "example.user.ts"),
+  example: resolve(directory, "data", "example.user.tsx"),
   library1: resolve(directory, "data", "library1.user.js"),
   library2: resolve(directory, "static", "library2.user.js"),
   deps: resolve(directory, "data", "deps.ts"),
