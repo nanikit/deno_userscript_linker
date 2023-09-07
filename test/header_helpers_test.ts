@@ -28,7 +28,7 @@ Deno.test("Given user script", async (test) => {
   });
 
   await test.step("when append the header", async (test) => {
-    const script1 = await Deno.readTextFile(scriptPaths.script1);
+    const script1 = await Deno.readTextFile(scriptPaths.library1);
 
     const first = extractUserscriptHeader(script);
     const second = extractUserscriptHeader(script1);

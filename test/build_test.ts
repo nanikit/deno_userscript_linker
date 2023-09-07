@@ -26,7 +26,7 @@ Deno.test("Given example user script", async (test) => {
       ]);
       const expectation = template.replace(
         "{{library1}}",
-        `${toFileUrl(scriptPaths.script1)}`,
+        `${toFileUrl(scriptPaths.library1)}`,
       );
       assertEquals(actual, expectation, `scriptPath: ${outputPath}`);
     });
