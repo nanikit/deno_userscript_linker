@@ -3,10 +3,10 @@ import { assertEquals, toFileUrl } from "./deps.ts";
 import { scriptPaths, setupExampleScript } from "./test_helpers.ts";
 
 Deno.test("Given script address referencing other script having header", async (test) => {
-  const setup = await setupExampleScript();
+  const { patchedPath, dispose } = await setupExampleScript();
 
   await test.step("when bundle", async (test) => {
-    const header = await makeBundleHeader(setup.patchedPath);
+    const header = await makeBundleHeader(patchedPath);
 
     await test.step("it should emit merged header", () => {
       assertEquals(header, {
@@ -30,5 +30,5 @@ Deno.test("Given script address referencing other script having header", async (
     });
   });
 
-  await setup.dispose();
+  await dispose();
 });

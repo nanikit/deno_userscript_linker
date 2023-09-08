@@ -1,22 +1,32 @@
+import { fromFileUrl, ky, resolve } from "./deps.ts";
 import {
   extractUserscriptHeader,
   type Header,
   mergeHeader,
 } from "./header_helpers.ts";
 import { nonNullable } from "./utils.ts";
-import { WebCache } from "./web_cache.ts";
 
-const cache = new WebCache();
+const cache = new Map<string, Response>();
+export const _internals = {
+  ky: ky.create({
+    hooks: {
+      beforeRequest: [(request) => {
+        return cache.get(request.url)?.clone();
+      }],
+    },
+  }),
+};
 
 export async function makeBundleHeader(
   id: string,
 ): Promise<Header> {
-  const script = await cache.getOrFetch(id);
-  if (!script) {
+  const js = await readOrFetch(id);
+  if (!js) {
     console.warn(`Cannot get ${id}`);
     return {};
   }
-  const header = extractUserscriptHeader(script);
+
+  const header = extractUserscriptHeader(js);
   if (!header) {
     return {};
   }
@@ -30,4 +40,32 @@ export async function makeBundleHeader(
   }
 
   return header;
+}
+
+async function readOrFetch(id: string) {
+  const { type, path } = getSourceKey(id);
+  switch (type) {
+    case "file":
+      try {
+        return await Deno.readTextFile(path);
+      } catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+          return null;
+        }
+        throw error;
+      }
+    case "url": {
+      return await _internals.ky.get(id).text();
+    }
+  }
+}
+
+function getSourceKey(path: string): { type: "url" | "file"; path: string } {
+  if (path.startsWith("http")) {
+    return { type: "url", path };
+  }
+
+  const relative = path.startsWith("file:") ? fromFileUrl(path) : path;
+  const absolute = resolve(relative);
+  return { type: "file", path: absolute };
 }

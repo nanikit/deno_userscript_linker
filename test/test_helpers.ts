@@ -1,5 +1,6 @@
-import { _internals } from "../lib/web_cache.ts";
-import { dirname, fromFileUrl, resolve, stub, toFileUrl } from "./deps.ts";
+import { ky } from "../lib/deps.ts";
+import { _internals } from "../lib/make_bundle_header.ts";
+import { dirname, fromFileUrl, resolve, toFileUrl } from "./deps.ts";
 
 const directory = dirname(fromFileUrl(import.meta.url));
 
@@ -11,11 +12,18 @@ export const scriptPaths = {
 };
 
 export async function setupExampleScript() {
-  const kyStub = stub(
-    _internals,
-    "ky",
-    mockLibraryHttps as typeof _internals.ky,
-  );
+  const kyi = ky.create({
+    hooks: {
+      beforeRequest: [async (request) => {
+        if (request.url === "http://localhost:8080/library2.user.js") {
+          return new Response(await Deno.readTextFile(scriptPaths.library2));
+        }
+        return new Response('"mocked"');
+      }],
+    },
+  });
+  const originalKy = _internals.ky;
+  _internals.ky = kyi;
   const temporaryDirectory = await Deno.makeTempDir();
   const [patchedPath] = await Promise.all([
     patchScriptFileUrl(scriptPaths, temporaryDirectory),
@@ -26,19 +34,10 @@ export async function setupExampleScript() {
     temporaryDirectory,
     patchedPath,
     dispose: async () => {
-      kyStub.restore();
+      _internals.ky = originalKy;
       await Deno.remove(temporaryDirectory, { recursive: true });
     },
   };
-}
-
-function mockLibraryHttps(url: string) {
-  switch (url) {
-    case "http://localhost:8080/library2.user.js":
-      return { text: () => Deno.readTextFile(scriptPaths.library2) };
-    default:
-      return { text: () => "'mocked'" };
-  }
 }
 
 async function patchScriptFileUrl(
