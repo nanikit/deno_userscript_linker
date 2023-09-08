@@ -12,4 +12,5 @@
 // @resource       library2         http://localhost:8080/library2.user.js
 // ==/UserScript==
 
+export * from "@stitches/react";
 console.log("lib 1");

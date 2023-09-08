@@ -1,6 +1,15 @@
-import { main } from "./lib/main.ts";
-export { default } from "./lib/rollup_plugin_userscript_link.ts";
+import { run } from "./lib/esbuild_plugin.ts";
+export { createPlugin, run } from "./lib/esbuild_plugin.ts";
 
 if (import.meta.main) {
-  main();
+  main().catch(console.error);
+}
+
+async function main() {
+  try {
+    await run(Deno.args);
+  } catch (error) {
+    console.error(error);
+    Deno.exit(1);
+  }
 }

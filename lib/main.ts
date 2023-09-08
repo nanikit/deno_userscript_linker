@@ -1,5 +1,5 @@
-import { expandGlob } from "https://deno.land/std@0.201.0/fs/expand_glob.ts";
 import {
+  expandGlob,
   parse,
   rollup,
   RollupOptions,

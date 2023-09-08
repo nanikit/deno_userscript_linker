@@ -3,6 +3,7 @@ import {
   type Header,
   mergeHeader,
 } from "./header_helpers.ts";
+import { nonNullable } from "./utils.ts";
 import { WebCache } from "./web_cache.ts";
 
 const cache = new WebCache();
@@ -29,8 +30,4 @@ export async function makeBundleHeader(
   }
 
   return header;
-}
-
-function nonNullable<T>(value: T): value is NonNullable<T> {
-  return value !== null && value !== undefined;
 }
