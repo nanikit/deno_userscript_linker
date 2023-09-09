@@ -143,10 +143,12 @@ function convertBrowsersList(target: string[]): string[] {
   ];
 }
 
+/** `ios_saf 15.6-15.7` -> `safari15.6` */
 function convertBrowsersListTarget(target: string): string | undefined {
   const [browser, version] = target.split(" ");
   const esBrowser = getEsbuildBrowser(browser!);
-  return esBrowser ? `${esBrowser}${version}` : undefined;
+  const esVersion = version?.split("-")?.[0];
+  return esBrowser && esVersion ? `${esBrowser}${esVersion}` : undefined;
 }
 
 function getEsbuildBrowser(browser: string): string | undefined {
