@@ -1,6 +1,6 @@
 import { ky } from "../lib/deps.ts";
 import { _internals } from "../lib/make_bundle_header.ts";
-import { dirname, fromFileUrl, resolve, toFileUrl } from "./deps.ts";
+import { dirname, FakeTime, fromFileUrl, resolve, toFileUrl } from "./deps.ts";
 
 const directory = dirname(fromFileUrl(import.meta.url));
 
@@ -31,11 +31,14 @@ export async function setupExampleScript() {
     patchScriptFileUrl(scriptPaths, temporaryDirectory),
     Deno.copyFile(scriptPaths.deps, resolve(temporaryDirectory, "deps.ts")),
   ]);
+  const time = new FakeTime("2023-09-01T01:02:03Z");
 
   return {
     temporaryDirectory,
     patchedPath,
+    time,
     dispose: async () => {
+      time.restore();
       _internals.ky = originalKy;
       await Deno.remove(temporaryDirectory, { recursive: true });
     },

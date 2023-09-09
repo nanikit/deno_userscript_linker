@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        main userscript
 // @description for test
-// @version     1.0.0
+// @version     230901010203
 // @namespace   https://greasyfork.org/en/users/713014-nanikit
 // @exclude     *
 // @match       http://unused-field.space/

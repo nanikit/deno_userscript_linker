@@ -26,7 +26,7 @@ export async function makeBundleHeader(
     return {};
   }
 
-  const header = extractUserscriptHeader(js);
+  let header = extractUserscriptHeader(js);
   if (!header) {
     return {};
   }
@@ -35,11 +35,22 @@ export async function makeBundleHeader(
   if (resources) {
     const urls = resources.map((x) => x.split(/\s+/)[1]).filter(nonNullable);
     const headers = await Promise.all(urls.map(makeBundleHeader));
-    const merged = headers.reduce(mergeHeader, header);
-    return merged;
+    header = headers.reduce(mergeHeader, header);
   }
+  replaceDateVersion(header);
 
   return header;
+}
+
+function replaceDateVersion(finalHeader: Header) {
+  const version = finalHeader["@version"]?.[0];
+  if (version) {
+    const dateVersion = new Date().toISOString().replace(/\D+/g, "").slice(
+      2,
+      14,
+    );
+    finalHeader["@version"] = [version.replace("{date_version}", dateVersion)];
+  }
 }
 
 async function readOrFetch(id: string) {
