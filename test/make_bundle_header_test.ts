@@ -11,7 +11,9 @@ Deno.test("Given script address referencing other script having header", async (
     await test.step("it should emit merged header", () => {
       assertEquals(header, {
         "@name": ["main userscript"],
+        "@name:ko": ["메인 스크립트"],
         "@description": ["for test"],
+        "@description:ko": ["테스트"],
         "@version": ["230901010203"],
         "@namespace": ["https://greasyfork.org/en/users/713014-nanikit"],
         "@exclude": ["*"],

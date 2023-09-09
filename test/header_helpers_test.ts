@@ -11,7 +11,9 @@ Deno.test("Given user script", async (test) => {
     await test.step("it should be correct", () => {
       assertEquals(parsed, {
         "@name": ["main userscript"],
+        "@name:ko": ["메인 스크립트"],
         "@description": ["for test"],
+        "@description:ko": ["테스트"],
         "@version": ["{date_version}"],
         "@namespace": ["https://greasyfork.org/en/users/713014-nanikit"],
         "@exclude": ["*"],
@@ -39,7 +41,9 @@ Deno.test("Given user script", async (test) => {
     await test.step("it should be correct", () => {
       assertEquals(merged, {
         "@name": ["main userscript"],
+        "@name:ko": ["메인 스크립트"],
         "@description": ["for test"],
+        "@description:ko": ["테스트"],
         "@version": ["{date_version}"],
         "@namespace": ["https://greasyfork.org/en/users/713014-nanikit"],
         "@exclude": ["*"],

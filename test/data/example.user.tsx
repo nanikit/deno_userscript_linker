@@ -1,6 +1,8 @@
 // ==UserScript==
 // @name           main userscript
+// @name:ko        메인 스크립트
 // @description    for test
+// @description:ko 테스트
 // @version        {date_version}
 // @namespace      https://greasyfork.org/en/users/713014-nanikit
 // @exclude        *

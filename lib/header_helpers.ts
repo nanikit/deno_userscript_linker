@@ -10,7 +10,7 @@ export function extractUserscriptHeader(
     return;
   }
 
-  const matches = header.matchAll(/^\s*\/\/\s*(@\w+)\s+(.+)/gm);
+  const matches = header.matchAll(/^\s*\/\/\s*(@\S+)\s+(.+)/gm);
   const record: Record<string, string[]> = {};
   for (const [, key, value] of matches) {
     if (record[key!]) {
