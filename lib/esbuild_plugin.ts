@@ -1,7 +1,11 @@
-import browserslist from "npm:browserslist";
-import * as esbuild from "npm:esbuild";
-import { resolve } from "../deps.ts";
-import { expandGlob, flow, parse } from "./deps.ts";
+import {
+  browserslist,
+  esbuild,
+  expandGlob,
+  flow,
+  parse,
+  resolve,
+} from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { makeBundleHeader } from "./make_bundle_header.ts";
 import { nonNullable } from "./utils.ts";
