@@ -22,10 +22,6 @@
 // deno-lint-ignore-file
 'use strict';
 
-if (typeof define !== 'function') {
-  throw new Error('requirejs not found.');
-}
-
 requirejs.config({
   enforceDefine: true,
 });

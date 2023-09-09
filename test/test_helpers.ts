@@ -8,6 +8,8 @@ export const scriptPaths = {
   example: resolve(directory, "data", "example.user.tsx"),
   library1: resolve(directory, "data", "library1.user.js"),
   library2: resolve(directory, "static", "library2.user.js"),
+  expectedExample: resolve(directory, "data", "expected_example.user.js"),
+  expectedLibrary1: resolve(directory, "data", "expected_library1.user.js"),
   deps: resolve(directory, "data", "deps.ts"),
 };
 

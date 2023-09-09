@@ -48,6 +48,7 @@ Deno.test("Given user script", async (test) => {
           "GM_getValue",
           "GM_setValue",
         ],
+        "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
         "@resource": [
           "@stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
           "library1        file://library1.user.js",

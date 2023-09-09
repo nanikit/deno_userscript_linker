@@ -18,6 +18,7 @@ Deno.test("Given script address referencing other script having header", async (
         "@match": ["http://unused-field.space/"],
         "@author": ["nanikit"],
         "@grant": ["GM_getValue", "GM_setValue", "GM_xmlhttpRequest"],
+        "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
         "@resource": [
           "@stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs",
           "fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs",

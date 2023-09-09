@@ -1,44 +1,77 @@
 import browserslist from "npm:browserslist";
 import * as esbuild from "npm:esbuild";
-import { expandGlob, parse } from "./deps.ts";
+import { resolve } from "../deps.ts";
+import { expandGlob, flow, parse } from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { makeBundleHeader } from "./make_bundle_header.ts";
 import { nonNullable } from "./utils.ts";
 
-export function createPlugin(
-  { isLib }: { isLib?: boolean } = {},
-): esbuild.Plugin {
+export function createPlugin(): esbuild.Plugin {
   let initialWrite: boolean;
 
   return {
     name: "userscript-link",
     async setup(build) {
       const { initialOptions } = build;
-      const header = await makeBundleHeader(
-        (initialOptions.entryPoints as string[])[0]!,
-      );
+      const inputs = initialOptions.entryPoints as string[];
+      const headers = await Promise.all(inputs.map(makeBundleHeader));
+      const external = [...new Set(headers.flatMap(getResourceKeys))];
+
       initialWrite = build.initialOptions.write ?? true;
       initialOptions.write = false;
-      initialOptions.external = getResourceKeys(header);
+      initialOptions.external = external;
+      initialOptions.metafile = true;
 
       build.onEnd(async (result) => {
-        const output = result.outputFiles![0];
-        if (!output) {
+        const outputs = result.outputFiles;
+        const outputsMeta = result.metafile?.outputs;
+        if (!outputs || !outputsMeta) {
           return;
         }
+        const resolvedOutputMetadata = flow(
+          Object.entries,
+          (x) => x.map(([file, output]) => [resolve(file), output]),
+          Object.fromEntries,
+        )(outputsMeta);
 
-        const script = bundleUserscript(header, output.text, { isLib });
-        if (initialWrite) {
-          await Deno.writeTextFile(output.path, script);
-          console.log(`[${new Date().toISOString()}] Wrote ${output.path}`);
-        }
+        await Promise.all(
+          outputs.map((output) =>
+            addHeader({
+              metas: resolvedOutputMetadata,
+              output,
+              initialWrite,
+            })
+          ),
+        );
       });
     },
   };
 }
 
+async function addHeader(
+  { metas, output, initialWrite }: {
+    metas: esbuild.Metafile["outputs"];
+    output: esbuild.OutputFile;
+    initialWrite: boolean;
+  },
+) {
+  const entryPoint = metas[output.path]?.entryPoint;
+  if (!entryPoint) {
+    return;
+  }
+
+  const header = await makeBundleHeader(entryPoint);
+  const script = bundleUserscript(header, output.text);
+  if (initialWrite) {
+    await Deno.writeTextFile(output.path, script);
+    console.log(`[${new Date().toISOString()}] Wrote ${output.path}`);
+  } else {
+    output.contents = new TextEncoder().encode(script);
+  }
+}
+
 export async function run(args: string[]) {
-  const { globs, inject, watch, lib, output } = getCommandParameters(args);
+  const { globs, inject, watch, output } = getCommandParameters(args);
   const inputs = await expandGlobs(globs);
   const defaultTarget = browserslist();
   const target = convertBrowsersList(defaultTarget);
@@ -53,7 +86,7 @@ export async function run(args: string[]) {
     entryPoints: inputs,
     ...getEsbuildOutputParameter(inputs, output),
     inject,
-    plugins: [createPlugin({ isLib: lib })],
+    plugins: [createPlugin()],
   });
   if (watch) {
     await context.watch();
@@ -78,10 +111,9 @@ function getCommandParameters(args: string[]): {
   inject: string[];
   output?: string;
   watch: boolean;
-  lib: boolean;
 } {
   const { _: globs, ...rest } = parse(args, {
-    boolean: ["watch", "lib"],
+    boolean: ["watch"],
     string: ["output", "inject"],
     alias: { "w": "watch", "o": "output" },
     default: { watch: false, lib: false },

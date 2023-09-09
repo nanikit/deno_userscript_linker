@@ -58,8 +58,10 @@ export function getResourceKeys(header: Header) {
 export function bundleUserscript(
   header: Header,
   code: string,
-  { isLib }: { isLib?: boolean } = {},
 ): string {
+  const requireJs =
+    /https:\/\/cdn\.jsdelivr\.net\/npm\/requirejs@2.3.6\/require.js/;
+  const isLib = header["@require"]?.every((x) => !x.match(requireJs)) ?? true;
   const finalHeader = isLib ? header : insertRequireJsRequirments(header);
   const headerString = `// ==UserScript==
 // ${[...headerToRows(finalHeader)].join("\n// ")}
@@ -69,11 +71,7 @@ export function bundleUserscript(
 'use strict';
 `;
 
-  const requireJsHeader = `if (typeof define !== 'function') {
-  throw new Error('requirejs not found.');
-}
-
-requirejs.config({
+  const requireJsHeader = `requirejs.config({
   enforceDefine: true,
 });
 
@@ -111,10 +109,7 @@ require(['main'], () => {}, console.error);
 }
 
 function insertRequireJsRequirments(header: Header) {
-  return mergeHeader(header, {
-    "@grant": ["GM_getResourceText"],
-    "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
-  });
+  return mergeHeader(header, { "@grant": ["GM_getResourceText"] });
 }
 
 function* headerToRows(header: Header) {
