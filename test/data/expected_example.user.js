@@ -25,7 +25,7 @@
 'use strict';
 
 requirejs.config({
-  enforceDefine: true,
+  skipDataMain: true,
 });
 
 define('main', (require, exports, module) => {

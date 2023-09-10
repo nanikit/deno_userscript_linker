@@ -72,7 +72,7 @@ export function bundleUserscript(
 `;
 
   const requireJsHeader = `requirejs.config({
-  enforceDefine: true,
+  skipDataMain: true,
 });
 
 define('main', (require, exports, module) => {`;
