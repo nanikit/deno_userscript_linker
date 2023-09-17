@@ -1,10 +1,6 @@
 import { fromFileUrl, ky, resolve } from "./deps.ts";
-import {
-  extractUserscriptHeader,
-  type Header,
-  mergeHeader,
-} from "./header_helpers.ts";
-import { nonNullable } from "./utils.ts";
+import { extractUserscriptHeader } from "./header_helpers.ts";
+import { Header } from "./header_helpers/internal.ts";
 
 const cache = new Map<string, Response>();
 export const _internals = {
@@ -17,40 +13,28 @@ export const _internals = {
   }),
 };
 
-export async function makeBundleHeader(
+export async function collectUserscriptHeaders(
   id: string,
-): Promise<Header> {
-  const js = await readOrFetch(id);
+  url: string,
+): Promise<Record<string, Header>> {
+  const js = await readOrFetch(url);
   if (!js) {
-    console.warn(`Cannot get ${id}`);
+    console.warn(`Cannot get ${url}`);
     return {};
   }
 
-  let header = extractUserscriptHeader(js);
+  const header = extractUserscriptHeader(js);
   if (!header) {
     return {};
   }
 
-  const resources = header["@resource"];
-  if (resources) {
-    const urls = resources.map((x) => x.split(/\s+/)[1]).filter(nonNullable);
-    const headers = await Promise.all(urls.map(makeBundleHeader));
-    header = headers.reduce(mergeHeader, header);
-  }
-  replaceDateVersion(header);
-
-  return header;
-}
-
-function replaceDateVersion(finalHeader: Header) {
-  const version = finalHeader["@version"]?.[0];
-  if (version) {
-    const dateVersion = new Date().toISOString().replace(/\D+/g, "").slice(
-      2,
-      14,
-    );
-    finalHeader["@version"] = [version.replace("{date_version}", dateVersion)];
-  }
+  const resources = header["@resource"] ?? [];
+  const pairs = resources.map((x) => x.split(/\s+/)) as [string, string][];
+  const headers = await Promise.all(
+    pairs.map(([key, url]) => collectUserscriptHeaders(key, url)),
+  );
+  const merged = Object.assign({ [id]: header }, ...headers);
+  return merged;
 }
 
 async function readOrFetch(id: string) {

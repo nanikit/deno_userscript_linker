@@ -1,4 +1,8 @@
-export type Header = Record<string, string[]>;
+import {
+  Header,
+  mainModuleKey,
+  renderBundleHeader,
+} from "./header_helpers/internal.ts";
 
 export function extractUserscriptHeader(
   code: string,
@@ -56,32 +60,37 @@ export function getResourceKeys(header: Header) {
 }
 
 export function bundleUserscript(
-  header: Header,
-  code: string,
+  script: string,
+  headers: Record<string, Header>,
 ): string {
+  const { [mainModuleKey]: mainHeader, ...subHeaders } = headers;
+  if (!mainHeader) {
+    throw new Error("main heeder not found");
+  }
+
   const requireJs =
     /https:\/\/cdn\.jsdelivr\.net\/npm\/requirejs@2.3.6\/require.js/;
-  const isLib = header["@require"]?.every((x) => !x.match(requireJs)) ?? true;
-  const finalHeader = isLib ? header : insertRequireJsRequirments(header);
-  const headerString = `// ==UserScript==
-// ${[...headerToRows(finalHeader)].join("\n// ")}
-// ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
-'use strict';
-`;
+  const isLib = mainHeader["@require"]?.every((x) => !x.match(requireJs)) ??
+    true;
+  const mergedHeader = Object.values(subHeaders).reduce(
+    mergeHeader,
+    mainHeader,
+  );
+  const finalHeader = replaceDateVersion(
+    isLib ? mergedHeader : insertRequireJsRequirements(mergedHeader),
+  );
 
   const requireJsHeader = `requirejs.config({
   skipDataMain: true,
 });
 
-define('main', (require, exports, module) => {`;
+define('${mainModuleKey}', (require, exports, module) => {`;
 
   return [
-    headerString,
+    renderBundleHeader(finalHeader),
     ...(isLib ? [] : [requireJsHeader]),
-    removeComment(code),
-    ...(isLib ? [] : [getRequireJsFooter(getResourceKeys(header) ?? [])]),
+    removeComment(script),
+    ...(isLib ? [] : [getRequireJsFooter(getResourceKeys(finalHeader) ?? [])]),
   ].join("\n");
 }
 
@@ -104,44 +113,12 @@ for (const name of ${JSON.stringify(dependencies)}) {
 }
 
 unsafeWindow.process = { env: { NODE_ENV: 'production' } };
-require(['main'], () => {}, console.error);
+require(['${mainModuleKey}'], () => {}, console.error);
 `;
 }
 
-function insertRequireJsRequirments(header: Header) {
+function insertRequireJsRequirements(header: Header) {
   return mergeHeader(header, { "@grant": ["GM_getResourceText"] });
-}
-
-function* headerToRows(header: Header) {
-  const keys = Object.keys(header);
-  const maxKeyLength = Math.max(...keys.map((x) => x.length));
-  const entries = Object.entries(header);
-  entries.sort(headerKeyComparer);
-
-  for (const [key, values] of entries) {
-    for (const value of values) {
-      yield `${key.padEnd(maxKeyLength)} ${value}`;
-    }
-  }
-}
-
-function headerKeyComparer(a: [string, string[]], b: [string, string[]]) {
-  const orderA = headerKeyOrder(a[0]);
-  const orderB = headerKeyOrder(b[0]);
-  return orderA - orderB;
-}
-
-function headerKeyOrder(name: string) {
-  switch (name) {
-    case "@grant":
-      return 1;
-    case "@require":
-      return 2;
-    case "@resource":
-      return 3;
-    default:
-      return 0;
-  }
 }
 
 function removeComment(code: string) {
@@ -151,4 +128,20 @@ function removeComment(code: string) {
     "$1",
   );
   return stripped;
+}
+
+function replaceDateVersion(header: Header) {
+  const version = header["@version"]?.[0];
+  if (!version?.includes("{date_version}")) {
+    return header;
+  }
+
+  const dateVersion = new Date().toISOString().replace(/\D+/g, "").slice(
+    2,
+    14,
+  );
+  return {
+    ...header,
+    "@version": [version.replace("{date_version}", dateVersion)],
+  };
 }

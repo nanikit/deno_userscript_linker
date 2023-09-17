@@ -7,7 +7,8 @@ import {
   resolve,
 } from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
-import { makeBundleHeader } from "./make_bundle_header.ts";
+import { mainModuleKey } from "./header_helpers/internal.ts";
+import { collectUserscriptHeaders } from "./make_bundle_header.ts";
 import { nonNullable } from "./utils.ts";
 
 export function createPlugin(): esbuild.Plugin {
@@ -18,8 +19,10 @@ export function createPlugin(): esbuild.Plugin {
     async setup(build) {
       const { initialOptions } = build;
       const inputs = initialOptions.entryPoints as string[];
-      const headers = await Promise.all(inputs.map(makeBundleHeader));
-      const external = [...new Set(headers.flatMap(getResourceKeys))];
+      const imports = await Promise.all(
+        inputs.map((url) => collectUserscriptHeaders(mainModuleKey, url)),
+      );
+      const external = imports.flatMap(Object.values).flatMap(getResourceKeys);
 
       initialWrite = build.initialOptions.write ?? true;
       initialOptions.write = false;
@@ -64,8 +67,8 @@ async function addHeader(
     return;
   }
 
-  const header = await makeBundleHeader(entryPoint);
-  const script = bundleUserscript(header, output.text);
+  const headers = await collectUserscriptHeaders(mainModuleKey, entryPoint);
+  const script = bundleUserscript(output.text, headers);
   if (initialWrite) {
     await Deno.writeTextFile(output.path, script);
     console.log(`[${new Date().toISOString()}] Wrote ${output.path}`);
