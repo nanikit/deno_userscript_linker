@@ -5,7 +5,6 @@ export {
   fromFileUrl,
   resolve,
 } from "https://deno.land/std@0.201.0/path/mod.ts";
-export { transform, transformFile } from "npm:@swc/core";
 export { default as browserslist } from "npm:browserslist";
 export * as esbuild from "npm:esbuild@0.19.2";
 export type * from "npm:ky";
