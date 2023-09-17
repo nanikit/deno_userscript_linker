@@ -25,7 +25,11 @@
 'use strict';
 
 requirejs.config({
-  skipDataMain: true,
+  config: {
+    "library1": { GM_setValue },
+    "library2": { GM_xmlhttpRequest },
+  },
+  skipDataMain: true
 });
 
 define('main', (require, exports, module) => {

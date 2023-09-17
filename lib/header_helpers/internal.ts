@@ -14,18 +14,18 @@ export function renderLibHeaderSnippet(header: Header): string {
   if (grants.length === 0) {
     return "";
   }
-  return `var { ${grants.join(", ")} } = module.config();`;
+  return `var { ${grants.join(", ")} } = module.config();\n`;
 }
 
 export function renderAppHeaderSnippet(headers: Record<string, Header>) {
   return `requirejs.config({
-${getAppConfigSnippet(headers)}  skipDataMain: true,
+${renderAppConfigSnippet(headers)}  skipDataMain: true
 });
 
 define('${mainModuleKey}', (require, exports, module) => {`;
 }
 
-export function getAppConfigSnippet(headers: Record<string, Header>) {
+export function renderAppConfigSnippet(headers: Record<string, Header>) {
   const grants = getGrants(headers);
   const rows = Object.entries(grants).map(([name, grants]) => {
     return `    "${name}": { ${grants.join(", ")} },\n`;
@@ -34,7 +34,8 @@ export function getAppConfigSnippet(headers: Record<string, Header>) {
 }
 
 function getGrants(headers: Record<string, Header>): Record<string, string[]> {
-  const nonEmptyGrants = Object.entries(headers).map(([name, header]) =>
+  const { main: _, ...rest } = headers;
+  const nonEmptyGrants = Object.entries(rest).map(([name, header]) =>
     [name, header["@grant"] ?? []] as const
   ).filter((x) => x[1].length > 0);
   return Object.fromEntries(nonEmptyGrants);

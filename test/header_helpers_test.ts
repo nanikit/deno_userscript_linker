@@ -1,4 +1,9 @@
 import { extractUserscriptHeader, mergeHeader } from "../lib/header_helpers.ts";
+import {
+  renderAppHeaderSnippet,
+  renderBundleHeader,
+  renderLibHeaderSnippet,
+} from "../lib/header_helpers/internal.ts";
 import { assertEquals } from "./deps.ts";
 
 Deno.test("Given userscript header parser", async (test) => {
@@ -86,12 +91,140 @@ Deno.test("Given userscript header merger", async (test) => {
 
   await test.step("when merge two headers having same grants", async (test) => {
     const merged = merge(
-      { "@grants": ["GM_getValue"] },
-      { "@grants": ["GM_getValue"] },
+      { "@grant": ["GM_getValue"] },
+      { "@grant": ["GM_getValue"] },
     );
 
     await test.step("it should return one grants", () => {
-      assertEquals(merged, { "@grants": ["GM_getValue"] });
+      assertEquals(merged, { "@grant": ["GM_getValue"] });
+    });
+  });
+});
+
+Deno.test("Given userscript header renderer", async (test) => {
+  const render = renderBundleHeader;
+
+  await test.step("when input empty header", async (test) => {
+    const rendered = render({});
+
+    await test.step("it should return empty header", () => {
+      assertEquals(
+        rendered,
+        `// ==UserScript==
+// ==/UserScript==
+// deno-fmt-ignore-file
+// deno-lint-ignore-file
+'use strict';\n`,
+      );
+    });
+  });
+
+  await test.step("when input header having different key length", async (test) => {
+    const rendered = render({
+      "@name": ["main userscript"],
+      "@description": ["for test"],
+    });
+
+    await test.step("it should align column", () => {
+      assertEquals(
+        rendered,
+        `// ==UserScript==
+// @name        main userscript
+// @description for test
+// ==/UserScript==
+// deno-fmt-ignore-file
+// deno-lint-ignore-file
+'use strict';\n`,
+      );
+    });
+  });
+});
+
+Deno.test("Given requirejs library header renderer", async (test) => {
+  const render = renderLibHeaderSnippet;
+
+  await test.step("when input empty", async (test) => {
+    const rendered = render({});
+
+    await test.step("it should return empty string", () => {
+      assertEquals(rendered, "");
+    });
+  });
+
+  await test.step("when library script use GM_getValue", async (test) => {
+    const rendered = render({
+      "@grant": ["GM_getValue"],
+    });
+
+    await test.step("it should receive it from config", () => {
+      assertEquals(rendered, `var { GM_getValue } = module.config();\n`);
+    });
+  });
+
+  await test.step("when input empty grant", async (test) => {
+    const rendered = render({ "@grant": [] });
+
+    await test.step("it should return empty string", () => {
+      assertEquals(rendered, "");
+    });
+  });
+});
+
+Deno.test("Given requirejs application header renderer", async (test) => {
+  const render = renderAppHeaderSnippet;
+
+  await test.step("when input null", async (test) => {
+    const rendered = render({});
+
+    await test.step("it should return template", () => {
+      assertEquals(
+        rendered,
+        `requirejs.config({
+  skipDataMain: true
+});
+
+define('main', (require, exports, module) => {`,
+      );
+    });
+  });
+
+  await test.step("when input a grant", async (test) => {
+    const rendered = render({ library1: { "@grant": ["GM_getValue"] } });
+
+    await test.step("it should write it to config", () => {
+      assertEquals(
+        rendered,
+        `requirejs.config({
+  config: {
+    "library1": { GM_getValue },
+  },
+  skipDataMain: true
+});
+
+define('main', (require, exports, module) => {`,
+      );
+    });
+  });
+
+  await test.step("when input grants", async (test) => {
+    const rendered = render({
+      library1: { "@grant": ["GM_getValue"] },
+      library2: { "@grant": ["GM_setValue", "GM_xmlhttpRequest"] },
+    });
+
+    await test.step("it should write it to config", () => {
+      assertEquals(
+        rendered,
+        `requirejs.config({
+  config: {
+    "library1": { GM_getValue },
+    "library2": { GM_setValue, GM_xmlhttpRequest },
+  },
+  skipDataMain: true
+});
+
+define('main', (require, exports, module) => {`,
+      );
     });
   });
 });

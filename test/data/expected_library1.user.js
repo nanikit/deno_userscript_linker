@@ -17,6 +17,8 @@
 // deno-lint-ignore-file
 'use strict';
 
+var { GM_setValue, GM_xmlhttpRequest } = module.config();
+
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;

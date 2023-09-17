@@ -1,7 +1,9 @@
 import {
   Header,
   mainModuleKey,
+  renderAppHeaderSnippet,
   renderBundleHeader,
+  renderLibHeaderSnippet,
 } from "./header_helpers/internal.ts";
 
 export function extractUserscriptHeader(
@@ -80,15 +82,11 @@ export function bundleUserscript(
     isLib ? mergedHeader : insertRequireJsRequirements(mergedHeader),
   );
 
-  const requireJsHeader = `requirejs.config({
-  skipDataMain: true,
-});
-
-define('${mainModuleKey}', (require, exports, module) => {`;
-
   return [
     renderBundleHeader(finalHeader),
-    ...(isLib ? [] : [requireJsHeader]),
+    isLib
+      ? renderLibHeaderSnippet(finalHeader)
+      : renderAppHeaderSnippet(headers),
     removeComment(script),
     ...(isLib ? [] : [getRequireJsFooter(getResourceKeys(finalHeader) ?? [])]),
   ].join("\n");
