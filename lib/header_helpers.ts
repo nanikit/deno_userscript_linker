@@ -1,5 +1,6 @@
 import {
   Header,
+  isLibraryHeader,
   mainModuleKey,
   renderAppHeaderSnippet,
   renderBundleHeader,
@@ -70,10 +71,7 @@ export function bundleUserscript(
     throw new Error("main heeder not found");
   }
 
-  const requireJs =
-    /https:\/\/cdn\.jsdelivr\.net\/npm\/requirejs@2.3.6\/require.js/;
-  const isLib = mainHeader["@require"]?.every((x) => !x.match(requireJs)) ??
-    true;
+  const isLib = isLibraryHeader(mainHeader);
   const mergedHeader = Object.values(subHeaders).reduce(
     mergeHeader,
     mainHeader,

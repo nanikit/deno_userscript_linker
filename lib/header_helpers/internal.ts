@@ -33,6 +33,12 @@ export function renderAppConfigSnippet(headers: Record<string, Header>) {
   return rows.length ? `  config: {\n${rows.join("")}  },\n` : "";
 }
 
+export function isLibraryHeader(mainHeader: Header) {
+  const requireJs =
+    /https:\/\/cdn\.jsdelivr\.net\/npm\/requirejs@\d+\.\d+\.\d+\/require.js/;
+  return mainHeader["@require"]?.every((x) => !x.match(requireJs)) ?? true;
+}
+
 function getGrants(headers: Record<string, Header>): Record<string, string[]> {
   const { main: _, ...rest } = headers;
   const nonEmptyGrants = Object.entries(rest).map(([name, header]) =>
