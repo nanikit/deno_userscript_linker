@@ -22,17 +22,9 @@
 // ==/UserScript==
 // deno-fmt-ignore-file
 // deno-lint-ignore-file
-'use strict';
+"use strict";
 
-requirejs.config({
-  config: {
-    "library1": { GM_setValue },
-    "library2": { GM_xmlhttpRequest },
-  },
-  skipDataMain: true
-});
-
-define('main', (require, exports, module) => {
+define("main", (require, exports, module) => {
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -61,10 +53,10 @@ __reExport(deps_exports, require("react-dom"));
 
 });
 
-for (const name of ["@stitches/react","fflate","library1","library2","react","react-dom"]) {
+define("tampermonkey-grants", (_, exports) => { Object.assign(exports, { GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
+for (const name of ["@stitches/react", "fflate", "library1", "library2", "react", "react-dom"]) {
   const body = GM_getResourceText(name);
-  define(name, Function('require', 'exports', 'module', body));
+  define(name, Function("require", "exports", "module", body));
 }
 
-unsafeWindow.process = { env: { NODE_ENV: 'production' } };
-require(['main'], () => {}, console.error);
+require(["main"], () => {}, console.error);

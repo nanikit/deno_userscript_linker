@@ -2,10 +2,11 @@ import {
   Header,
   isLibraryHeader,
   mainModuleKey,
-  renderAppHeaderSnippet,
   renderBundleHeader,
-  renderLibHeaderSnippet,
+  renderFooterScript,
+  renderHeaderScript,
 } from "./header_helpers/internal.ts";
+export { getResourceKeys } from "./header_helpers/internal.ts";
 
 export function extractUserscriptHeader(
   code: string,
@@ -58,10 +59,6 @@ export function mergeHeader(main: Header, sub: Header): Header {
   };
 }
 
-export function getResourceKeys(header: Header) {
-  return Object.keys(getResourceMap(header));
-}
-
 export function bundleUserscript(
   script: string,
   headers: Record<string, Header>,
@@ -80,37 +77,18 @@ export function bundleUserscript(
     isLib ? mergedHeader : insertRequireJsRequirements(mergedHeader),
   );
 
-  return [
+  const parts = [
     renderBundleHeader(finalHeader),
-    isLib
-      ? renderLibHeaderSnippet(finalHeader)
-      : renderAppHeaderSnippet(headers),
+    renderHeaderScript(finalHeader),
     removeComment(script),
-    ...(isLib ? [] : [getRequireJsFooter(getResourceKeys(finalHeader) ?? [])]),
-  ].join("\n");
-}
+    renderFooterScript(finalHeader),
+  ];
 
-function getResourceMap(header: Header): Record<string, string> {
-  const resourceTable = header["@resource"]?.map((x) => x.split(/\s+/)) ??
-    [];
-  return Object.fromEntries(resourceTable);
+  return `${parts.join("\n").trim()}\n`;
 }
 
 function mergeAndSort(a?: string[], b?: string[]) {
   return [...new Set([...a ?? [], ...b ?? []])].sort();
-}
-
-function getRequireJsFooter(dependencies: string[]) {
-  return `});
-
-for (const name of ${JSON.stringify(dependencies)}) {
-  const body = GM_getResourceText(name);
-  define(name, Function('require', 'exports', 'module', body));
-}
-
-unsafeWindow.process = { env: { NODE_ENV: 'production' } };
-require(['${mainModuleKey}'], () => {}, console.error);
-`;
 }
 
 function insertRequireJsRequirements(header: Header) {

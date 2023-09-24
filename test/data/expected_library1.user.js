@@ -15,9 +15,9 @@
 // ==/UserScript==
 // deno-fmt-ignore-file
 // deno-lint-ignore-file
-'use strict';
+"use strict";
 
-var { GM_setValue, GM_xmlhttpRequest } = module.config();
+var { GM_setValue, GM_xmlhttpRequest } = require("tampermonkey-grants");
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;

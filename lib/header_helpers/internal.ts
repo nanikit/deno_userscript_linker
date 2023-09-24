@@ -1,51 +1,70 @@
 export type Header = Record<string, string[]>;
 export const mainModuleKey = "main";
+export const grantsModuleKey = "tampermonkey-grants";
 
 export function renderBundleHeader(header: Header): string {
   return `// ==UserScript==
 ${[...headerToRows(header)].map((x) => `// ${x}\n`).join("")}// ==/UserScript==
 // deno-fmt-ignore-file
 // deno-lint-ignore-file
-'use strict';\n`;
+"use strict";\n`;
 }
 
-export function renderLibHeaderSnippet(header: Header): string {
-  const grants = header["@grant"] ?? [];
-  if (grants.length === 0) {
+export function renderHeaderScript(headers: Header) {
+  if (isLibraryHeader(headers)) {
+    if (!headers["@grant"]?.length) {
+      return "";
+    }
+    return `var { ${
+      headers["@grant"]?.join(", ")
+    } } = require("${grantsModuleKey}");\n`;
+  }
+
+  if (!headers["@resource"]?.length) {
     return "";
   }
-  return `var { ${grants.join(", ")} } = module.config();\n`;
+  return `define("${mainModuleKey}", (require, exports, module) => {`;
 }
 
-export function renderAppHeaderSnippet(headers: Record<string, Header>) {
-  return `requirejs.config({
-${renderAppConfigSnippet(headers)}  skipDataMain: true
-});
+export function renderFooterScript(header: Header) {
+  if (isLibraryHeader(header) || !header["@resource"]?.length) {
+    return "";
+  }
 
-define('${mainModuleKey}', (require, exports, module) => {`;
+  return `});
+${renderGrantModuleDefinition(header)}
+for (const name of ["${getResourceKeys(header).join('", "')}"]) {
+  const body = GM_getResourceText(name);
+  define(name, Function("require", "exports", "module", body));
 }
 
-export function renderAppConfigSnippet(headers: Record<string, Header>) {
-  const grants = getGrants(headers);
-  const rows = Object.entries(grants).map(([name, grants]) => {
-    return `    "${name}": { ${grants.join(", ")} },\n`;
-  });
-  return rows.length ? `  config: {\n${rows.join("")}  },\n` : "";
+require(["${mainModuleKey}"], () => {}, console.error);`;
 }
 
 export function isLibraryHeader(mainHeader: Header) {
-  const requireJs =
-    /https:\/\/cdn\.jsdelivr\.net\/npm\/requirejs@\d+\.\d+\.\d+\/require.js/;
+  const requireJs = /\/require.js\b/;
   return mainHeader["@require"]?.every((x) => !x.match(requireJs)) ?? true;
 }
 
-function getGrants(headers: Record<string, Header>): Record<string, string[]> {
-  const { main: _, ...rest } = headers;
-  const nonEmptyGrants = Object.entries(rest).map(([name, header]) =>
-    [name, header["@grant"] ?? []] as const
-  ).filter((x) => x[1].length > 0);
-  return Object.fromEntries(nonEmptyGrants);
+export function getResourceKeys(header: Header) {
+  return Object.keys(getResourceMap(header));
 }
+
+function renderGrantModuleDefinition(header: Header) {
+  if (!header["@grant"]?.length) {
+    return "";
+  }
+  return `\ndefine("${grantsModuleKey}", (_, exports) => { Object.assign(exports, { ${
+    header["@grant"].join(", ")
+  } }); });`;
+}
+
+function getResourceMap(header: Header): Record<string, string> {
+  const resourceTable = header["@resource"]?.map((x) => x.split(/\s+/)) ??
+    [];
+  return Object.fromEntries(resourceTable);
+}
+
 function* headerToRows(header: Header) {
   const keys = Object.keys(header);
   const maxKeyLength = Math.max(...keys.map((x) => x.length));
