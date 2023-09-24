@@ -2,7 +2,7 @@
 
 Bundle userscript with deno while leaving aside dependencies at @resource.
 
-Simply put, it bundles [this typescript](./test/data/example.user.ts) to
+Simply put, it bundles [this typescript](./test/data/example.user.tsx) to
 [javascript](./test/data/expected_example.user.js).
 
 ## Usage
