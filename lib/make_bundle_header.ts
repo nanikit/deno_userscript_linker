@@ -56,7 +56,7 @@ async function readOrFetch(id: string) {
 }
 
 function getSourceKey(path: string): { type: "url" | "file"; path: string } {
-  if (path.startsWith("http")) {
+  if (path.startsWith("http") || path.startsWith("data:")) {
     return { type: "url", path };
   }
 

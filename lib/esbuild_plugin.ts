@@ -26,7 +26,7 @@ export function createPlugin(): esbuild.Plugin {
 
       initialWrite = build.initialOptions.write ?? true;
       initialOptions.write = false;
-      initialOptions.external = external;
+      initialOptions.external = [...external, "tampermonkey-grants"];
       initialOptions.metafile = true;
 
       build.onEnd(async (result) => {
