@@ -84,7 +84,7 @@ export function bundleUserscript(
     renderFooterScript(finalHeader),
   ];
 
-  return `${parts.join("\n").trim()}\n`;
+  return `${parts.filter(Boolean).join("\n").trim()}\n`;
 }
 
 function mergeAndSort(a?: string[], b?: string[]) {

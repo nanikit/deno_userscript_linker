@@ -53,7 +53,8 @@ __reExport(deps_exports, require("react-dom"));
 
 });
 
-define("tampermonkey-grants", (_, exports) => { Object.assign(exports, { GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
+define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
+requirejs.config({ deps: ["tampermonkey_grants"] });
 for (const name of ["@stitches/react", "fflate", "library1", "library2", "react", "react-dom"]) {
   const body = GM_getResourceText(name);
   define(name, Function("require", "exports", "module", body));

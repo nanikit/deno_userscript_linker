@@ -151,27 +151,14 @@ Deno.test("Given requirejs script header renderer", async (test) => {
     });
   });
 
-  await test.step("when input library header with no grants", async (test) => {
+  await test.step("when input library header", async (test) => {
     const rendered = render({
       "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
+      "@grant": ["GM_setValue", "window.close"],
     });
 
     await test.step("it should return empty", () => {
       assertEquals(rendered, "");
-    });
-  });
-
-  await test.step("when input library header with grants", async (test) => {
-    const rendered = render({
-      "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
-      "@grant": ["GM_setValue"],
-    });
-
-    await test.step("it should return empty", () => {
-      assertEquals(
-        rendered,
-        `var { GM_setValue } = require("tampermonkey-grants");\n`,
-      );
     });
   });
 
@@ -247,7 +234,7 @@ require(["main"], () => {}, console.error);`,
   await test.step("when input application header having grant and dependencies", async (test) => {
     const rendered = render({
       "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
-      "@grant": ["GM_setValue"],
+      "@grant": ["GM_setValue", "window.close"],
       "@resource": [
         "react https://cdn.jsdelivr.net/npm/react",
         "react-dom https://cdn.jsdelivr.net/npm/react-dom",
@@ -259,7 +246,8 @@ require(["main"], () => {}, console.error);`,
         rendered,
         `});
 
-define("tampermonkey-grants", (_, exports) => { Object.assign(exports, { GM_setValue }); });
+define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_setValue }); });
+requirejs.config({ deps: ["tampermonkey_grants"] });
 for (const name of ["react", "react-dom"]) {
   const body = GM_getResourceText(name);
   define(name, Function("require", "exports", "module", body));

@@ -1,6 +1,6 @@
 export type Header = Record<string, string[]>;
 export const mainModuleKey = "main";
-export const grantsModuleKey = "tampermonkey-grants";
+export const grantsModuleKey = "tampermonkey_grants";
 
 export function renderBundleHeader(header: Header): string {
   return `// ==UserScript==
@@ -12,12 +12,7 @@ ${[...headerToRows(header)].map((x) => `// ${x}\n`).join("")}// ==/UserScript==
 
 export function renderHeaderScript(headers: Header) {
   if (isLibraryHeader(headers)) {
-    if (!headers["@grant"]?.length) {
-      return "";
-    }
-    return `var { ${
-      headers["@grant"]?.join(", ")
-    } } = require("${grantsModuleKey}");\n`;
+    return "";
   }
 
   if (!headers["@resource"]?.length) {
@@ -54,9 +49,15 @@ function renderGrantModuleDefinition(header: Header) {
   if (!header["@grant"]?.length) {
     return "";
   }
-  return `\ndefine("${grantsModuleKey}", (_, exports) => { Object.assign(exports, { ${
-    header["@grant"].join(", ")
-  } }); });`;
+
+  let grants = header["@grant"].filter((x) => !x.includes("."));
+  if (grants.some((x) => x.startsWith("GM_"))) {
+    grants = ["GM", ...grants];
+  }
+  return `\ndefine("${grantsModuleKey}", function() { Object.assign(this.window, { ${
+    grants.join(", ")
+  } }); });
+requirejs.config({ deps: ["tampermonkey_grants"] });`;
 }
 
 function getResourceMap(header: Header): Record<string, string> {
