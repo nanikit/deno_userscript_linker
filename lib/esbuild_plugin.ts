@@ -44,7 +44,7 @@ export function createPlugin(): esbuild.Plugin {
         await Promise.all(
           outputs.map((output) =>
             addHeader({
-              metas: resolvedOutputMetadata,
+              metadata: resolvedOutputMetadata,
               output,
               initialWrite,
             })
@@ -56,13 +56,13 @@ export function createPlugin(): esbuild.Plugin {
 }
 
 async function addHeader(
-  { metas, output, initialWrite }: {
-    metas: esbuild.Metafile["outputs"];
+  { metadata, output, initialWrite }: {
+    metadata: esbuild.Metafile["outputs"];
     output: esbuild.OutputFile;
     initialWrite: boolean;
   },
 ) {
-  const entryPoint = metas[output.path]?.entryPoint;
+  const entryPoint = metadata[output.path]?.entryPoint;
   if (!entryPoint) {
     return;
   }
