@@ -1,11 +1,4 @@
-import {
-  browserslist,
-  esbuild,
-  expandGlob,
-  flow,
-  parse,
-  resolve,
-} from "./deps.ts";
+import { browserslist, esbuild, expandGlob, flow, parse, resolve } from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";

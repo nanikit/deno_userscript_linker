@@ -46,9 +46,7 @@ export function mergeHeader(main: Header, sub: Header): Header {
   const maxKeyLength = Math.max(
     ...resourceTable.map((x) => x[0]?.length ?? -Infinity),
   );
-  const rows = resourceTable.map((x) =>
-    `${x[0]?.padEnd(maxKeyLength)} ${x.slice(1)}`
-  );
+  const rows = resourceTable.map((x) => `${x[0]?.padEnd(maxKeyLength)} ${x.slice(1)}`);
   const resources = mergeAndSort(rows, []);
 
   return {

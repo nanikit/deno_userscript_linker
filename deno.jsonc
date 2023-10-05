@@ -3,6 +3,9 @@
   "tasks": {
     "dev": "deno run --watch main.ts"
   },
+  "fmt": {
+    "lineWidth": 100
+  },
   "imports": {
     "@stitches/react": "npm:@stitches/react",
     "fflate": "npm:fflate",
