@@ -11,16 +11,16 @@ export function createPlugin(): esbuild.Plugin {
     name: "userscript-link",
     async setup(build) {
       const { initialOptions } = build;
+
+      initialWrite = build.initialOptions.write ?? true;
+      initialOptions.write = false;
+      initialOptions.metafile = true;
+
       const inputs = initialOptions.entryPoints as string[];
       const imports = await Promise.all(
         inputs.map((url) => collectUserscriptHeaders(mainModuleKey, url)),
       );
-      const external = imports.flatMap(Object.values).flatMap(getResourceKeys);
-
-      initialWrite = build.initialOptions.write ?? true;
-      initialOptions.write = false;
-      initialOptions.external = [...external, "tampermonkey-grants"];
-      initialOptions.metafile = true;
+      initialOptions.external = imports.flatMap(Object.values).flatMap(getResourceKeys);
 
       build.onEnd(async (result) => {
         const outputs = result.outputFiles;
