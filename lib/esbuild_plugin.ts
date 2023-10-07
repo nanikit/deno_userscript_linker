@@ -62,11 +62,10 @@ async function addHeader(
 
   const headers = await collectUserscriptHeaders(mainModuleKey, entryPoint);
   const script = bundleUserscript(output.text, headers);
+  output.contents = new TextEncoder().encode(script);
   if (initialWrite) {
-    await Deno.writeTextFile(output.path, script);
+    await Deno.writeFile(output.path, output.contents);
     console.log(`[${new Date().toISOString()}] Wrote ${output.path}`);
-  } else {
-    output.contents = new TextEncoder().encode(script);
   }
 }
 
