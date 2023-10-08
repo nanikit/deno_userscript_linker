@@ -87,7 +87,12 @@ async function writeFileAndLog(syncPath: string, output: esbuild.OutputFile) {
 }
 
 export async function run(args: string[]) {
-  const { globs, inject, watch, output, outputSync } = await getCommandParameters(args);
+  const { globs, inject, watch, output, outputSync, help } = await getCommandParameters(args);
+  if (help) {
+    printHelp();
+    return;
+  }
+
   const inputs = await expandGlobs(globs);
   const defaultTarget = browserslist();
   const target = convertBrowsersList(defaultTarget);
@@ -112,6 +117,25 @@ export async function run(args: string[]) {
   }
 }
 
+function printHelp() {
+  const { mainModule } = Deno;
+  console.log(`Usage: deno run -A ${mainModule} [options] [files...]
+
+Options:
+  -w, --watch            Watch mode
+  -o, --output           Output directory or file name
+  -s, --output-sync      TamperDAV sync directory
+  -i, --inject           Inject code, see https://esbuild.github.io/api/#inject
+  -h, --help             Show help
+
+Environment variables (supports .env):
+  OUTPUT_SYNC            Default value for --output-sync
+
+Examples:
+  deno run -A ${mainModule} --output ./dist --output-sync ./sync --inject "console.log('Hello, world!')" ./src/*.user.ts
+  deno run -A ${mainModule} --watch --output ./dist --output-sync ./sync ./a.user.ts ./b.user.ts`);
+}
+
 async function expandGlobs(patterns: string[]) {
   const inputs = [];
   for (const pattern of patterns) {
@@ -129,9 +153,9 @@ async function getCommandParameters(args: string[]) {
   };
 
   const { _: globs, "output-sync": outputSync, ...rest } = parse(args, {
-    boolean: ["watch"],
+    boolean: ["watch", "help"],
     string: ["inject", "output", "output-sync"],
-    alias: { "w": "watch", "o": "output", "s": "output-sync" },
+    alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help" },
     default: { watch: false, lib: false },
     collect: ["inject"],
   });
