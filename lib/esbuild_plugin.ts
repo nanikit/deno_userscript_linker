@@ -2,17 +2,16 @@ import { browserslist, esbuild, expandGlob, flow, parse, resolve } from "./deps.
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";
+import { SyncMap } from "./sync_map.ts";
 import { nonNullable } from "./utils.ts";
 
-export function createPlugin(): esbuild.Plugin {
-  let initialWrite: boolean;
-
+export function createPlugin({ syncDirectory }: { syncDirectory?: string } = {}): esbuild.Plugin {
   return {
     name: "userscript-link",
     async setup(build) {
       const { initialOptions } = build;
 
-      initialWrite = build.initialOptions.write ?? true;
+      const initialWrite = build.initialOptions.write ?? true;
       initialOptions.write = false;
       initialOptions.metafile = true;
 
@@ -22,37 +21,48 @@ export function createPlugin(): esbuild.Plugin {
       );
       initialOptions.external = imports.flatMap(Object.values).flatMap(getResourceKeys);
 
-      build.onEnd(async (result) => {
-        const outputs = result.outputFiles;
-        const outputsMeta = result.metafile?.outputs;
-        if (!outputs || !outputsMeta) {
-          return;
-        }
-        const resolvedOutputMetadata = flow(
-          Object.entries,
-          (x) => x.map(([file, output]) => [resolve(file), output]),
-          Object.fromEntries,
-        )(outputsMeta);
+      const syncMap = syncDirectory ? await new SyncMap(syncDirectory).load() : null;
 
-        await Promise.all(
-          outputs.map((output) =>
-            addHeader({
-              metadata: resolvedOutputMetadata,
-              output,
-              initialWrite,
-            })
-          ),
-        );
+      build.onEnd(async (result) => {
+        await amendUserscripts(result, { initialWrite, syncMap });
       });
     },
   };
 }
 
+async function amendUserscripts(
+  result: esbuild.BuildResult<esbuild.BuildOptions>,
+  { initialWrite, syncMap }: { initialWrite: boolean; syncMap?: SyncMap | null },
+) {
+  const outputs = result.outputFiles;
+  const outputsMeta = result.metafile?.outputs;
+  if (!outputs || !outputsMeta) {
+    return;
+  }
+  const resolvedOutputMetadata = flow(
+    Object.entries,
+    (x) => x.map(([file, output]) => [resolve(file), output]),
+    Object.fromEntries,
+  )(outputsMeta);
+
+  await Promise.all(
+    outputs.map((output) =>
+      addHeader({
+        metadata: resolvedOutputMetadata,
+        output,
+        initialWrite,
+        syncMap,
+      })
+    ),
+  );
+}
+
 async function addHeader(
-  { metadata, output, initialWrite }: {
+  { metadata, output, initialWrite, syncMap }: {
     metadata: esbuild.Metafile["outputs"];
     output: esbuild.OutputFile;
     initialWrite: boolean;
+    syncMap?: SyncMap | null;
   },
 ) {
   const entryPoint = metadata[output.path]?.entryPoint;
@@ -63,14 +73,21 @@ async function addHeader(
   const headers = await collectUserscriptHeaders(mainModuleKey, entryPoint);
   const script = bundleUserscript(output.text, headers);
   output.contents = new TextEncoder().encode(script);
-  if (initialWrite) {
-    await Deno.writeFile(output.path, output.contents);
-    console.log(`[${new Date().toISOString()}] Wrote ${output.path}`);
-  }
+
+  const syncPath = syncMap?.getOrCreate(headers[mainModuleKey]!);
+  await Promise.all([
+    ...(initialWrite ? [writeFileAndLog(output.path, output)] : []),
+    ...(syncPath ? [writeFileAndLog(syncPath, output)] : []),
+  ]);
+}
+
+async function writeFileAndLog(syncPath: string, output: esbuild.OutputFile) {
+  await Deno.writeFile(syncPath, output.contents);
+  console.log(`[${new Date().toISOString()}] Wrote ${syncPath}`);
 }
 
 export async function run(args: string[]) {
-  const { globs, inject, watch, output } = getCommandParameters(args);
+  const { globs, inject, watch, output, outputSync } = getCommandParameters(args);
   const inputs = await expandGlobs(globs);
   const defaultTarget = browserslist();
   const target = convertBrowsersList(defaultTarget);
@@ -85,7 +102,7 @@ export async function run(args: string[]) {
     entryPoints: inputs,
     ...getEsbuildOutputParameter(inputs, output),
     inject,
-    plugins: [createPlugin()],
+    plugins: [createPlugin({ syncDirectory: outputSync })],
   });
   if (watch) {
     await context.watch();
@@ -109,16 +126,17 @@ function getCommandParameters(args: string[]): {
   globs: string[];
   inject: string[];
   output?: string;
+  outputSync?: string;
   watch: boolean;
 } {
-  const { _: globs, ...rest } = parse(args, {
+  const { _: globs, "output-sync": outputSync, ...rest } = parse(args, {
     boolean: ["watch"],
-    string: ["output", "inject"],
-    alias: { "w": "watch", "o": "output" },
+    string: ["inject", "output", "output-sync"],
+    alias: { "w": "watch", "o": "output", "s": "output-sync" },
     default: { watch: false, lib: false },
     collect: ["inject"],
   });
-  return { ...rest, globs: globs.map((x) => `${x}`) };
+  return { ...rest, outputSync, globs: globs.map((x) => `${x}`) };
 }
 
 function getEsbuildOutputParameter(

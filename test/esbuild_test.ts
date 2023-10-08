@@ -15,6 +15,8 @@ const paths = {
   tmp: resolve(directory, "tmp"),
   tmpInput: resolve(directory, "tmp", "input"),
   tmpOutput: resolve(directory, "tmp", "output"),
+  tmpSync: resolve(directory, "tmp", "sync"),
+  tmpSyncExample: resolve(directory, "tmp", "sync", "9e61de4e-18b0-46c6-8656-892faae3815b.user.js"),
   actualExample: resolve(directory, "tmp", "output", "example.user.js"),
   actualLibrary1: resolve(directory, "tmp", "output", "library1.user.js"),
 };
@@ -25,7 +27,11 @@ Deno.test({
     const { restore } = await setup();
 
     await test.step("when build", async (test) => {
-      await run([`${paths.tmpInput}/*.user.{tsx,js}`, "--output", "test/tmp/output"]);
+      await run([
+        `${paths.tmpInput}/*.user.{tsx,js}`,
+        ...["--output", paths.tmpOutput],
+        ...["--output-sync", paths.tmpSync],
+      ]);
 
       await test.step({
         name: "main script should match expectation",
@@ -56,6 +62,21 @@ Deno.test({
           assertEquals(actual, expectation);
         },
       });
+
+      await test.step({
+        name: "sync should contain all built scripts",
+        fn: async (_test) => {
+          const scripts = await Promise.all([
+            Deno.readTextFile(paths.actualExample),
+            Deno.readTextFile(paths.actualLibrary1),
+            Deno.readTextFile(paths.tmpSyncExample),
+            readSyncExample(),
+          ]);
+          const [outputs, syncs] = [scripts.slice(0, 2), scripts.slice(2)];
+
+          assertEquals(outputs, syncs);
+        },
+      });
     });
 
     restore();
@@ -63,6 +84,15 @@ Deno.test({
   sanitizeOps: false,
   sanitizeResources: false,
 });
+
+async function readSyncExample() {
+  for await (const file of Deno.readDir(paths.tmpSync)) {
+    if (paths.tmpSyncExample.endsWith(file.name)) {
+      continue;
+    }
+    return Deno.readTextFile(resolve(paths.tmpSync, file.name));
+  }
+}
 
 async function setup() {
   const restoreKy = mockKy();
@@ -113,7 +143,13 @@ async function prepareInput() {
     Deno.copyFile(paths.deps, resolve(inputDirectory, "deps.ts")),
     Deno.copyFile(paths.library1, resolve(inputDirectory, "library1.user.js")),
     Deno.mkdir(paths.tmpOutput),
+    prepareSyncDirectory(),
   ]);
+}
+
+async function prepareSyncDirectory() {
+  await Deno.mkdir(paths.tmpSync);
+  await Deno.copyFile(paths.example, paths.tmpSyncExample);
 }
 
 async function patchScriptFileUrl(
