@@ -63,7 +63,7 @@ export function bundleUserscript(
 ): string {
   const { [mainModuleKey]: mainHeader, ...subHeaders } = headers;
   if (!mainHeader) {
-    throw new Error("main heeder not found");
+    throw new Error("main header not found");
   }
 
   const isLib = isLibraryHeader(mainHeader);
