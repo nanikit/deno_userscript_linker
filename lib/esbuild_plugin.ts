@@ -1,4 +1,4 @@
-import { browserslist, esbuild, expandGlob, flow, parse, resolve } from "./deps.ts";
+import { browserslist, esbuild, expandGlob, flow, loadDotEnv, parse, resolve } from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";
@@ -87,7 +87,7 @@ async function writeFileAndLog(syncPath: string, output: esbuild.OutputFile) {
 }
 
 export async function run(args: string[]) {
-  const { globs, inject, watch, output, outputSync } = getCommandParameters(args);
+  const { globs, inject, watch, output, outputSync } = await getCommandParameters(args);
   const inputs = await expandGlobs(globs);
   const defaultTarget = browserslist();
   const target = convertBrowsersList(defaultTarget);
@@ -122,13 +122,12 @@ async function expandGlobs(patterns: string[]) {
   return inputs;
 }
 
-function getCommandParameters(args: string[]): {
-  globs: string[];
-  inject: string[];
-  output?: string;
-  outputSync?: string;
-  watch: boolean;
-} {
+async function getCommandParameters(args: string[]) {
+  const env = {
+    ...await loadDotEnv(),
+    ...Deno.env.toObject(),
+  };
+
   const { _: globs, "output-sync": outputSync, ...rest } = parse(args, {
     boolean: ["watch"],
     string: ["inject", "output", "output-sync"],
@@ -136,7 +135,11 @@ function getCommandParameters(args: string[]): {
     default: { watch: false, lib: false },
     collect: ["inject"],
   });
-  return { ...rest, outputSync, globs: globs.map((x) => `${x}`) };
+  return {
+    ...rest,
+    outputSync: outputSync ?? env.OUTPUT_SYNC,
+    globs: globs.map((x) => `${x}`),
+  };
 }
 
 function getEsbuildOutputParameter(

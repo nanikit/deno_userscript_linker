@@ -1,3 +1,4 @@
+export { load as loadDotEnv } from "https://deno.land/std@0.203.0/dotenv/mod.ts";
 export { parse } from "https://deno.land/std@0.203.0/flags/mod.ts";
 export { expandGlob } from "https://deno.land/std@0.203.0/fs/expand_glob.ts";
 export * from "https://deno.land/std@0.203.0/path/mod.ts";
