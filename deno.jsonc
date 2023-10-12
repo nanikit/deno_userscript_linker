@@ -4,12 +4,9 @@
     "dev": "deno run --watch main.ts"
   },
   "fmt": {
-    "lineWidth": 100,
-    "exclude": ["test/tmp", "test/expected_output"]
+    "lineWidth": 100
   },
-  "lint": {
-    "exclude": ["test/tmp", "test/expected_output"]
-  },
+  "exclude": ["test/tmp", "test/expected_output"],
   "imports": {
     "@stitches/react": "npm:@stitches/react",
     "fflate": "npm:fflate",
