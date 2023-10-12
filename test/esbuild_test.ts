@@ -17,6 +17,12 @@ const paths = {
   tmpOutput: resolve(directory, "tmp", "output"),
   tmpSync: resolve(directory, "tmp", "sync"),
   tmpSyncExample: resolve(directory, "tmp", "sync", "9e61de4e-18b0-46c6-8656-892faae3815b.user.js"),
+  tmpSyncExampleMeta: resolve(
+    directory,
+    "tmp",
+    "sync",
+    "9e61de4e-18b0-46c6-8656-892faae3815b.meta.json",
+  ),
   actualExample: resolve(directory, "tmp", "output", "example.user.js"),
   actualLibrary1: resolve(directory, "tmp", "output", "library1.user.js"),
 };
@@ -24,7 +30,7 @@ const paths = {
 Deno.test({
   name: "Given example user script",
   fn: async (test) => {
-    const { restore } = await setup();
+    const { time, restore } = await setup();
 
     await test.step("when build", async (test) => {
       await run([
@@ -35,7 +41,7 @@ Deno.test({
 
       await test.step({
         name: "main script should match expectation",
-        fn: async (_test) => {
+        fn: async () => {
           const [actual, template] = await Promise.all([
             Deno.readTextFile(paths.actualExample),
             Deno.readTextFile(paths.expectedExample),
@@ -50,7 +56,7 @@ Deno.test({
 
       await test.step({
         name: "script 1 should match expectation",
-        fn: async (_test) => {
+        fn: async () => {
           const [actual, template] = await Promise.all([
             Deno.readTextFile(paths.actualLibrary1),
             Deno.readTextFile(paths.expectedLibrary1),
@@ -65,16 +71,18 @@ Deno.test({
 
       await test.step({
         name: "sync should contain all built scripts",
-        fn: async (_test) => {
-          const scripts = await Promise.all([
+        fn: async () => {
+          const [actualExample, tmpSyncExample, metaJson] = await Promise.all([
             Deno.readTextFile(paths.actualExample),
-            Deno.readTextFile(paths.actualLibrary1),
             Deno.readTextFile(paths.tmpSyncExample),
-            readSyncExample(),
+            Deno.readTextFile(paths.tmpSyncExampleMeta),
           ]);
-          const [outputs, syncs] = [scripts.slice(0, 2), scripts.slice(2)];
 
-          assertEquals(outputs, syncs);
+          assertEquals(actualExample, tmpSyncExample);
+          assertEquals(
+            metaJson,
+            `{"uuid":"9e61de4e-18b0-46c6-8656-892faae3815b","name":"main userscript","options":{},"lastModified":${time.now}}`,
+          );
         },
       });
     });
@@ -85,21 +93,13 @@ Deno.test({
   sanitizeResources: false,
 });
 
-async function readSyncExample() {
-  for await (const file of Deno.readDir(paths.tmpSync)) {
-    if (paths.tmpSyncExample.endsWith(file.name)) {
-      continue;
-    }
-    return Deno.readTextFile(resolve(paths.tmpSync, file.name));
-  }
-}
-
 async function setup() {
   const restoreKy = mockKy();
   const time = new FakeTime("2023-09-01T01:02:03Z");
   await prepareInput();
 
   return {
+    time,
     restore: () => {
       time.restore();
       restoreKy();

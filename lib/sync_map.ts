@@ -1,25 +1,25 @@
-import { join, resolve } from "./deps.ts";
+import { basename, join, resolve } from "./deps.ts";
 import { extractUserscriptHeader } from "./header_helpers.ts";
 import { Header } from "./header_helpers/internal.ts";
 
-type PathMap = Map<string | null, Map<string, string>>;
+/** @internal */
+export type PathMap = Map<string | null, Map<string, { path: string; metaPath: string }>>;
 
 export class SyncMap {
-  #paths = new Map<string | null, Map<string, string>>();
-
   #directory: string;
+  #namespaces = new Map() as PathMap;
 
   constructor(tamperDavPath: string) {
     this.#directory = tamperDavPath;
   }
 
   load = async () => {
-    this.#paths = await getUserscriptMap(this.#directory);
+    this.#namespaces = await getUserscriptMap(this.#directory);
     return this;
   };
 
   getOrCreate = (header: Header) => {
-    return getOrCreate(this.#paths, { header, directory: this.#directory });
+    return getOrCreate(this.#namespaces, { header, directory: this.#directory });
   };
 }
 
@@ -32,27 +32,30 @@ export async function getUserscriptMap(path: string) {
       continue;
     }
 
-    const metaPath = resolve(path, file.name);
-    const script = await Deno.readTextFile(metaPath);
+    const scriptPath = resolve(path, file.name);
+    const script = await Deno.readTextFile(scriptPath);
     const header = extractUserscriptHeader(script);
     const name = header?.["@name"]?.[0];
     if (!name) {
       continue;
     }
 
-    const namespaceMap = getNamespaceMap(paths, header);
+    const namespaceMap = getOrCreateNamespaceMap(paths, header);
     if (namespaceMap.has(name)) {
       throw new Error(`Duplicate userscript name: ${name}`);
     }
 
-    namespaceMap.set(name, metaPath);
+    namespaceMap.set(name, {
+      path: scriptPath,
+      metaPath: scriptPath.replace(/\.user\.js$/, ".meta.json"),
+    });
   }
 
   return paths;
 }
 
 export function getOrCreate(
-  syncMap: PathMap,
+  pathMap: PathMap,
   { header, directory }: { header: Header; directory: string },
 ) {
   const name = header["@name"]?.[0];
@@ -60,19 +63,35 @@ export function getOrCreate(
     return null;
   }
 
-  const namespaceMap = getNamespaceMap(syncMap, header);
+  const namespaceMap = getOrCreateNamespaceMap(pathMap, header);
   return namespaceMap?.get(name) ?? (() => {
-    const path = join(directory, `${crypto.randomUUID()}.user.js`);
-    namespaceMap.set(name, path);
-    return path;
+    const uuid = crypto.randomUUID();
+    const item = {
+      path: join(directory, `${uuid}.user.js`),
+      metaPath: join(directory, `${uuid}.meta.json`),
+    };
+    namespaceMap.set(name, item);
+    return item;
   })();
 }
 
-function getNamespaceMap(syncMap: PathMap, header: Header) {
+// If user removed userscript, tampermonkey add options.removed: Date.now() into meta.json.
+// So it overwrite meta.json always to reset this.
+export async function writeMetaJson(metaPath: string, name: string) {
+  const json = JSON.stringify({
+    uuid: basename(metaPath, ".meta.json"),
+    name,
+    options: {},
+    lastModified: Date.now(),
+  });
+  await Deno.writeTextFile(metaPath, json);
+}
+
+function getOrCreateNamespaceMap(namespaces: PathMap, header: Header) {
   const namespace = header["@namespace"]?.[0] ?? null;
-  return syncMap.get(namespace) ?? (() => {
-    const map = new Map<string, string>();
-    syncMap.set(namespace, map);
+  return namespaces.get(namespace) ?? (() => {
+    const map = new Map<string, { path: string; metaPath: string }>();
+    namespaces.set(namespace, map);
     return map;
   })();
 }

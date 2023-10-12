@@ -2,7 +2,7 @@ import { browserslist, esbuild, expandGlob, flow, loadDotEnv, parse, resolve } f
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";
-import { SyncMap } from "./sync_map.ts";
+import { SyncMap, writeMetaJson } from "./sync_map.ts";
 import { nonNullable } from "./utils.ts";
 
 export function createPlugin({ syncDirectory }: { syncDirectory?: string } = {}): esbuild.Plugin {
@@ -74,16 +74,21 @@ async function addHeader(
   const script = bundleUserscript(output.text, headers);
   output.contents = new TextEncoder().encode(script);
 
-  const syncPath = syncMap?.getOrCreate(headers[mainModuleKey]!);
+  const header = headers[mainModuleKey]!;
+  const name = header["@name"]![0]!;
+  const sync = syncMap?.getOrCreate(header);
   await Promise.all([
     ...(initialWrite ? [writeFileAndLog(output.path, output)] : []),
-    ...(syncPath ? [writeFileAndLog(syncPath, output)] : []),
+    ...(sync ? [writeFileAndLog(sync.path, output), writeMetaJson(sync?.metaPath, name)] : []),
   ]);
 }
 
-async function writeFileAndLog(syncPath: string, output: esbuild.OutputFile) {
-  await Deno.writeFile(syncPath, output.contents);
-  console.log(`[${new Date().toISOString()}] Wrote ${syncPath}`);
+async function writeFileAndLog(
+  path: string,
+  output: esbuild.OutputFile,
+) {
+  await Deno.writeFile(path, output.contents);
+  console.log(`[${new Date().toISOString()}] Wrote ${path}`);
 }
 
 export async function run(args: string[]) {

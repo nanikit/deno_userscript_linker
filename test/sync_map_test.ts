@@ -1,5 +1,13 @@
-import { getOrCreate, getUserscriptMap, SyncMap } from "../lib/sync_map.ts";
-import { assert, assertEquals, assertMatch, assertRejects, join, resolve } from "./deps.ts";
+import { getOrCreate, getUserscriptMap, PathMap, writeMetaJson } from "../lib/sync_map.ts";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertRejects,
+  FakeTime,
+  join,
+  resolve,
+} from "./deps.ts";
 
 Deno.test("Given empty sync directory", async (test) => {
   const directory = await Deno.makeTempDir();
@@ -32,7 +40,7 @@ Deno.test("Given directory containing an empty directory", async (test) => {
 
 Deno.test("Given sync directory containing an userscript", async (test) => {
   const directory = await Deno.makeTempDir();
-  const { name, path } = await writeScript(directory, { name: "example" });
+  const { name, path, metaPath } = await writeScript(directory, { name: "example" });
 
   await test.step("when get userscript map", async (test) => {
     const pathMap = await getUserscriptMap(directory);
@@ -40,17 +48,8 @@ Deno.test("Given sync directory containing an userscript", async (test) => {
     await test.step("it should return that", () => {
       assertEquals(
         pathMap,
-        new Map([[null, new Map([[name, path]])]]),
+        new Map([[null, new Map([[name, { path, metaPath }]])]]),
       );
-    });
-  });
-
-  await test.step("when get userscript map by sync map", async (test) => {
-    const syncMap = await new SyncMap(directory).load();
-    const result = syncMap.getOrCreate({ ["@name"]: ["example"] });
-
-    await test.step("it should return that", () => {
-      assertEquals(result, path);
     });
   });
 
@@ -59,7 +58,7 @@ Deno.test("Given sync directory containing an userscript", async (test) => {
 
 Deno.test("Given sync directory containing an userscript having namespace", async (test) => {
   const directory = await Deno.makeTempDir();
-  const { name, namespace, path } = await writeScript(directory, {
+  const { name, namespace, path, metaPath } = await writeScript(directory, {
     name: "example",
     namespace: "https://example",
   });
@@ -70,7 +69,7 @@ Deno.test("Given sync directory containing an userscript having namespace", asyn
     await test.step("it should return that", () => {
       assertEquals(
         pathMap,
-        new Map([[namespace!, new Map([[name, path]])]]),
+        new Map([[namespace!, new Map([[name, { path, metaPath }]])]]),
       );
     });
   });
@@ -92,8 +91,11 @@ Deno.test("Given sync directory containing two different userscripts", async (te
       assertEquals(
         pathMap,
         new Map([
-          [null, new Map([[script1.name, script1.path]])],
-          [script2.namespace, new Map([[script2.name, script2.path]])],
+          [null, new Map([[script1.name, { path: script1.path, metaPath: script1.metaPath }]])],
+          [
+            script2.namespace,
+            new Map([[script2.name, { path: script2.path, metaPath: script2.metaPath }]]),
+          ],
         ]),
       );
     });
@@ -137,7 +139,8 @@ Deno.test("Given empty sync map", async (test) => {
 });
 
 Deno.test("Given sync map containing userscript", async (test) => {
-  const syncMap = new Map([[null, new Map([["example", "D:\\dav\\example.user.js"]])]]);
+  const item = { path: "D:\\dav\\example.user.js", metaPath: "D:\\dav\\example.meta.json" };
+  const syncMap = new Map([[null, new Map([["example", item]])]]);
 
   await test.step("when add same userscript", async (test) => {
     const path = getOrCreate(syncMap, {
@@ -146,50 +149,133 @@ Deno.test("Given sync map containing userscript", async (test) => {
     });
 
     await test.step("it should return existing path", () => {
-      assertEquals(path, "D:\\dav\\example.user.js");
+      assertEquals(path, item);
     });
   });
 });
 
 Deno.test("Given empty sync map", async (test) => {
-  const syncMap = new Map();
+  const syncMap = new Map() as PathMap;
 
   await test.step("when add new userscript", async (test) => {
-    const path = getOrCreate(syncMap, {
+    const { path, metaPath } = getOrCreate(syncMap, {
       header: { ["@name"]: ["example"] },
       directory: join("D:", "dav"),
-    });
+    })!;
 
     await test.step("it should add it", () => {
       assertEquals(syncMap.size, 1);
-      assertEquals(syncMap.get(null).size, 1);
-    });
-
-    await test.step("it should generate uuid", () => {
-      const path = syncMap.get(null).get("example");
-      assert(path.startsWith(join("D:", "dav")));
-      assertMatch(path, /[/\\][0-9a-f-]{36}\.user\.js/);
+      assertEquals(syncMap.get(null)!.size, 1);
     });
 
     await test.step("it should return it", () => {
-      assert(path!.startsWith(join("D:", "dav")));
-      assertMatch(path!, /[/\\][0-9a-f-]{36}\.user\.js/);
+      const item = syncMap.get(null)!.get("example")!;
+      assertEquals(path, item.path);
+      assertEquals(metaPath, item.metaPath);
+    });
+
+    await test.step("added item should contain uuid", () => {
+      assert(path.startsWith(join("D:", "dav")));
+      assertMatch(path, /[/\\][0-9a-f-]{36}\.user\.js$/);
+      assert(metaPath.startsWith(join("D:", "dav")));
+      assertMatch(metaPath, /[/\\][0-9a-f-]{36}\.meta\.json$/);
     });
   });
+});
+
+Deno.test("Given no meta.json", async (test) => {
+  const time = new FakeTime(1695759428000);
+
+  const directory = await Deno.makeTempDir();
+  const path = join(directory, "example.meta.json");
+
+  await test.step("when touch meta.json", async (test) => {
+    await writeMetaJson(path, "example");
+
+    await test.step("it should create", async () => {
+      const json = await Deno.readTextFile(path);
+      assertEquals(
+        json,
+        `{"uuid":"example","name":"example","options":{},"lastModified":${time.now}}`,
+      );
+    });
+  });
+
+  await Deno.remove(directory, { recursive: true });
+  time.restore();
+});
+
+Deno.test("Given existing meta.json", async (test) => {
+  const time = new FakeTime(1695759428000);
+
+  const directory = await Deno.makeTempDir();
+  const path = join(directory, "example.meta.json");
+  await Deno.writeTextFile(
+    path,
+    `{"uuid":"example","name":"example","options":{},"lastModified":0}`,
+  );
+
+  await test.step("when touch meta.json", async (test) => {
+    await writeMetaJson(path, "example");
+
+    await test.step("it should update timestamp", async () => {
+      const json = await Deno.readTextFile(path);
+      assertEquals(
+        json,
+        `{"uuid":"example","name":"example","options":{},"lastModified":1695759428000}`,
+      );
+    });
+  });
+
+  await Deno.remove(directory, { recursive: true });
+  time.restore();
+});
+
+Deno.test("Given meta.json marked as removed", async (test) => {
+  const time = new FakeTime(1695759428000);
+
+  const directory = await Deno.makeTempDir();
+  const path = join(directory, "example.meta.json");
+  const metaJson =
+    `{"uuid":"example","name":"example","options":{"removed":1695759420000},"lastModified":0}`;
+  await Deno.writeTextFile(path, metaJson);
+
+  await test.step("when touch meta.json", async (test) => {
+    await writeMetaJson(path, "example");
+
+    await test.step("it should remove removed timestamp", async () => {
+      const json = await Deno.readTextFile(path);
+      assertEquals(
+        json,
+        `{"uuid":"example","name":"example","options":{},"lastModified":1695759428000}`,
+      );
+    });
+  });
+
+  await Deno.remove(directory, { recursive: true });
+  time.restore();
 });
 
 async function writeScript(
   directory: string,
   { name, namespace, fileName }: { name: string; namespace?: string; fileName?: string },
 ) {
-  const path = resolve(directory, `${fileName ?? name}.user.js`);
-  await Deno.writeTextFile(
-    path,
-    `// ==UserScript==
+  const baseName = fileName ?? name;
+  const path = resolve(directory, `${baseName}.user.js`);
+  const metaPath = resolve(directory, `${baseName}.meta.json`);
+  await Promise.all([
+    Deno.writeTextFile(
+      path,
+      `// ==UserScript==
 // @name         ${name}
 ${namespace ? `// @namespace    ${namespace}\n` : ""}// ==/UserScript==
 `,
-  );
+    ),
+    Deno.writeTextFile(
+      metaPath,
+      `{"uuid":"${baseName}","name":"${name}","options":{},"lastModified":1695759428000}`,
+    ),
+  ]);
 
-  return { name, namespace, path };
+  return { name, namespace, path, metaPath };
 }
