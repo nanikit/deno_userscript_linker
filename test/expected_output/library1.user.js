@@ -13,8 +13,6 @@
 // @resource    library2        http://localhost:8080/library2.user.js
 // @resource    react           https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
 "use strict";
 
 var __defProp = Object.defineProperty;

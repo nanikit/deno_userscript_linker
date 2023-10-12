@@ -20,8 +20,6 @@
 // @resource       react           https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // @resource       react-dom       https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
 // ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
 "use strict";
 
 define("main", (require, exports, module) => {

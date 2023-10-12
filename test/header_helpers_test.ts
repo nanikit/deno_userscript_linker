@@ -112,8 +112,6 @@ Deno.test("Given userscript header renderer", async (test) => {
         rendered,
         `// ==UserScript==
 // ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
 "use strict";\n`,
       );
     });
@@ -132,8 +130,6 @@ Deno.test("Given userscript header renderer", async (test) => {
 // @name        main userscript
 // @description for test
 // ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
 "use strict";\n`,
       );
     });

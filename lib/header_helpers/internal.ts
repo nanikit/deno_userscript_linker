@@ -5,8 +5,6 @@ export const grantsModuleKey = "tampermonkey_grants";
 export function renderBundleHeader(header: Header): string {
   return `// ==UserScript==
 ${[...headerToRows(header)].map((x) => `// ${x}\n`).join("")}// ==/UserScript==
-// deno-fmt-ignore-file
-// deno-lint-ignore-file
 "use strict";\n`;
 }
 
