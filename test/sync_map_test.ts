@@ -114,8 +114,38 @@ Deno.test("Given sync directory containing two same userscripts", async (test) =
   await test.step("when get userscript map", async (test) => {
     const get = () => getUserscriptMap(directory);
 
-    await test.step("it should return that", async () => {
+    await test.step("it should throw", async () => {
       await assertRejects(get, Error, "Duplicate userscript name: example1");
+    });
+  });
+
+  await Deno.remove(directory, { recursive: true });
+});
+
+Deno.test("Given sync directory containing removed userscript", async (test) => {
+  const directory = await Deno.makeTempDir();
+  const uuid = "e0919104-ed19-4eb9-89fd-6b20a18572cd";
+  const path = resolve(directory, `${uuid}.user.js`);
+  const metaPath = resolve(directory, `${uuid}.meta.json`);
+  await Promise.all([
+    Deno.writeTextFile(
+      path,
+      `// ==UserScript==
+// @name         ${uuid}
+// ==/UserScript==
+`,
+    ),
+    Deno.writeTextFile(
+      metaPath,
+      `{"uuid":"${uuid}","name":"${uuid}","options":{"removed":1695759428000},"lastModified":1695759428000}`,
+    ),
+  ]);
+
+  await test.step("when get userscript map", async (test) => {
+    const pathMap = await getUserscriptMap(directory);
+
+    await test.step("it should return empty", () => {
+      assertEquals(pathMap, new Map());
     });
   });
 
@@ -205,14 +235,14 @@ Deno.test("Given no meta.json", async (test) => {
   time.restore();
 });
 
-Deno.test("Given existing meta.json", async (test) => {
+Deno.test("Given removed meta.json", async (test) => {
   const time = new FakeTime(1695759428000);
 
   const directory = await Deno.makeTempDir();
   const path = join(directory, "example.meta.json");
   await Deno.writeTextFile(
     path,
-    `{"uuid":"example","name":"example","options":{},"lastModified":0}`,
+    `{"uuid":"example","name":"example","options":{"removed":1695759420000},"lastModified":0}`,
   );
 
   await test.step("when touch meta.json", async (test) => {
@@ -222,32 +252,7 @@ Deno.test("Given existing meta.json", async (test) => {
       const json = await Deno.readTextFile(path);
       assertEquals(
         json,
-        `{"uuid":"example","name":"example","options":{},"lastModified":1695759428000}`,
-      );
-    });
-  });
-
-  await Deno.remove(directory, { recursive: true });
-  time.restore();
-});
-
-Deno.test("Given meta.json marked as removed", async (test) => {
-  const time = new FakeTime(1695759428000);
-
-  const directory = await Deno.makeTempDir();
-  const path = join(directory, "example.meta.json");
-  const metaJson =
-    `{"uuid":"example","name":"example","options":{"removed":1695759420000},"lastModified":0}`;
-  await Deno.writeTextFile(path, metaJson);
-
-  await test.step("when touch meta.json", async (test) => {
-    await writeMetaJson(path, "example");
-
-    await test.step("it should remove removed timestamp", async () => {
-      const json = await Deno.readTextFile(path);
-      assertEquals(
-        json,
-        `{"uuid":"example","name":"example","options":{},"lastModified":1695759428000}`,
+        `{"uuid":"example","name":"example","options":{"removed":1695759420000},"lastModified":1695759428000}`,
       );
     });
   });

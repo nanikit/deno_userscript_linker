@@ -28,12 +28,27 @@ export async function getUserscriptMap(path: string) {
   const paths = new Map() as PathMap;
 
   for await (const file of Deno.readDir(path)) {
-    if (!file.isFile) {
+    if (!file.isFile || !file.name.endsWith(".meta.json")) {
       continue;
     }
 
-    const scriptPath = resolve(path, file.name);
-    const script = await Deno.readTextFile(scriptPath);
+    const metaPath = resolve(path, file.name);
+    const json = await Deno.readTextFile(metaPath);
+    const meta = JSON.parse(json);
+    if (meta?.options?.removed) {
+      continue;
+    }
+
+    const scriptPath = resolve(path, meta.uuid.replace(/$/, ".user.js"));
+    let script = "";
+    try {
+      script = await Deno.readTextFile(scriptPath);
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        continue;
+      }
+    }
+
     const header = extractUserscriptHeader(script);
     const name = header?.["@name"]?.[0];
     if (!name) {
@@ -47,7 +62,7 @@ export async function getUserscriptMap(path: string) {
 
     namespaceMap.set(name, {
       path: scriptPath,
-      metaPath: scriptPath.replace(/\.user\.js$/, ".meta.json"),
+      metaPath,
     });
   }
 
@@ -78,13 +93,24 @@ export function getOrCreate(
 // If user removed userscript, tampermonkey add options.removed: Date.now() into meta.json.
 // So it overwrite meta.json always to reset this.
 export async function writeMetaJson(metaPath: string, name: string) {
-  const json = JSON.stringify({
-    uuid: basename(metaPath, ".meta.json"),
-    name,
-    options: {},
-    lastModified: Date.now(),
-  });
-  await Deno.writeTextFile(metaPath, json);
+  try {
+    const json = await Deno.readTextFile(metaPath);
+    const meta = JSON.parse(json);
+    meta.lastModified = Date.now();
+    await Deno.writeTextFile(metaPath, JSON.stringify(meta));
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      await Deno.writeTextFile(
+        metaPath,
+        JSON.stringify({
+          uuid: basename(metaPath, ".meta.json"),
+          name,
+          options: {},
+          lastModified: Date.now(),
+        }),
+      );
+    }
+  }
 }
 
 function getOrCreateNamespaceMap(namespaces: PathMap, header: Header) {

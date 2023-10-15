@@ -1,7 +1,15 @@
 import { ky } from "../lib/deps.ts";
 import { run } from "../lib/esbuild_plugin.ts";
 import { _internals } from "../lib/make_bundle_header.ts";
-import { assertEquals, dirname, FakeTime, fromFileUrl, resolve, toFileUrl } from "./deps.ts";
+import {
+  assertEquals,
+  basename,
+  dirname,
+  FakeTime,
+  fromFileUrl,
+  resolve,
+  toFileUrl,
+} from "./deps.ts";
 
 const directory = dirname(fromFileUrl(import.meta.url));
 
@@ -149,7 +157,15 @@ async function prepareInput() {
 
 async function prepareSyncDirectory() {
   await Deno.mkdir(paths.tmpSync);
-  await Deno.copyFile(paths.example, paths.tmpSyncExample);
+
+  const uuid = basename(paths.tmpSyncExample, ".user.js");
+  await Promise.all([
+    Deno.copyFile(paths.example, paths.tmpSyncExample),
+    Deno.writeTextFile(
+      paths.tmpSyncExampleMeta,
+      `{"uuid":"${uuid}","name":"main userscript","options":{},"lastModified":1693530123000}`,
+    ),
+  ]);
 }
 
 async function patchScriptFileUrl(
