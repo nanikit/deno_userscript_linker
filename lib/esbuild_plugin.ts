@@ -1,4 +1,15 @@
-import { browserslist, esbuild, expandGlob, flow, loadDotEnv, parse, resolve } from "./deps.ts";
+import {
+  browserslist,
+  denoPlugins,
+  esbuild,
+  exists,
+  expandGlob,
+  loadDotEnv,
+  parse,
+  resolve,
+  sep,
+  toFileUrl,
+} from "./deps.ts";
 import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";
@@ -19,10 +30,20 @@ export function createPlugin({ syncDirectory }: { syncDirectory?: string } = {})
       const imports = await Promise.all(
         inputs.map((url) => collectUserscriptHeaders(mainModuleKey, url)),
       );
-      initialOptions.external = imports.flatMap(Object.values).flatMap(getResourceKeys);
+      initialOptions.external = [
+        ...new Set([
+          ...(initialOptions.external ?? []),
+          ...imports.flatMap(Object.values).flatMap(getResourceKeys),
+        ]),
+      ];
 
       const syncMap = syncDirectory ? await new SyncMap(syncDirectory).load() : null;
 
+      build.onResolve({ filter: /./ }, (args) => {
+        if (initialOptions.external?.includes(args.path)) {
+          return { external: true };
+        }
+      });
       build.onEnd(async (result) => {
         await amendUserscripts(result, { initialWrite, syncMap });
       });
@@ -39,16 +60,10 @@ async function amendUserscripts(
   if (!outputs || !outputsMeta) {
     return;
   }
-  const resolvedOutputMetadata = flow(
-    Object.entries,
-    (x) => x.map(([file, output]) => [resolve(file), output]),
-    Object.fromEntries,
-  )(outputsMeta);
-
   await Promise.all(
     outputs.map((output) =>
       addHeader({
-        metadata: resolvedOutputMetadata,
+        metadata: outputsMeta,
         output,
         initialWrite,
         syncMap,
@@ -65,11 +80,14 @@ async function addHeader(
     syncMap?: SyncMap | null;
   },
 ) {
-  const entryPoint = metadata[output.path]?.entryPoint;
-  if (!entryPoint) {
+  const slashPath = output.path.replaceAll(sep, "/");
+  const [relative, meta] = Object.entries(metadata).find((x) => slashPath.endsWith(x[0])) ?? [];
+  if (!relative || !meta?.entryPoint) {
     return;
   }
 
+  const base = slashPath.replace(relative, "");
+  const entryPoint = resolve(base, meta.entryPoint);
   const headers = await collectUserscriptHeaders(mainModuleKey, entryPoint);
   const script = bundleUserscript(output.text, headers);
   output.contents = new TextEncoder().encode(script);
@@ -92,7 +110,8 @@ async function writeFileAndLog(
 }
 
 export async function run(args: string[]) {
-  const { globs, inject, watch, output, outputSync, help } = await getCommandParameters(args);
+  const parameters = await getCommandParameters(args);
+  const { globs, inject, watch, output, outputSync, help, denoJson } = parameters;
   if (help) {
     printHelp();
     return;
@@ -101,8 +120,10 @@ export async function run(args: string[]) {
   const inputs = await expandGlobs(globs);
   const defaultTarget = browserslist();
   const target = convertBrowsersList(defaultTarget);
+  const injectUrls = inject?.map(coerceToFileUrl);
+  const configPath = denoJson ?? await findDenoJson();
 
-  const context = await esbuild.context({
+  const options = {
     allowOverwrite: true,
     bundle: true,
     charset: "utf8",
@@ -111,14 +132,29 @@ export async function run(args: string[]) {
     treeShaking: true,
     entryPoints: inputs,
     ...getEsbuildOutputParameter(inputs, output),
-    inject,
-    plugins: [createPlugin({ syncDirectory: outputSync })],
-  });
+    inject: injectUrls,
+    plugins: [
+      createPlugin({ syncDirectory: outputSync }),
+      ...denoPlugins({ configPath }),
+    ],
+  } as esbuild.BuildOptions;
+  const context = await esbuild.context(options);
   if (watch) {
     await context.watch();
   } else {
     await context.rebuild();
     await context.dispose();
+  }
+}
+
+async function findDenoJson() {
+  const names = ["deno.jsonc", "deno.json"];
+  const currentDirectory = Deno.cwd();
+  for (const name of names) {
+    const path = resolve(currentDirectory, name);
+    if (await exists(path)) {
+      return path;
+    }
   }
 }
 
@@ -130,11 +166,13 @@ Options:
   -w, --watch            Watch mode
   -o, --output           Output directory or file name
   -s, --output-sync      TamperDAV sync directory
+  -d, --deno-json        Path to deno.jsonc
   -i, --inject           Inject code, see https://esbuild.github.io/api/#inject
   -h, --help             Show help
 
 Environment variables (supports .env):
   OUTPUT_SYNC            Default value for --output-sync
+  DENO_JSON              Default value for --deno-json
 
 Examples:
   deno run -A ${mainModule} --output ./dist --output-sync ./sync --inject "console.log('Hello, world!')" ./src/*.user.ts
@@ -145,7 +183,7 @@ async function expandGlobs(patterns: string[]) {
   const inputs = [];
   for (const pattern of patterns) {
     for await (const walk of expandGlob(pattern)) {
-      inputs.push(walk.path);
+      inputs.push(coerceToFileUrl(walk.path));
     }
   }
   return inputs;
@@ -157,9 +195,9 @@ async function getCommandParameters(args: string[]) {
     ...Deno.env.toObject(),
   };
 
-  const { _: globs, "output-sync": outputSync, ...rest } = parse(args, {
+  const { _: globs, "output-sync": outputSync, "deno-json": denoJson, ...rest } = parse(args, {
     boolean: ["watch", "help"],
-    string: ["inject", "output", "output-sync"],
+    string: ["inject", "output", "output-sync", "deno-json"],
     alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help" },
     default: { watch: false, lib: false },
     collect: ["inject"],
@@ -167,6 +205,7 @@ async function getCommandParameters(args: string[]) {
   return {
     ...rest,
     outputSync: outputSync ?? env.OUTPUT_SYNC,
+    denoJson: denoJson ?? env.DENO_JSON,
     globs: globs.map((x) => `${x}`),
   };
 }
@@ -213,4 +252,8 @@ function getEsbuildBrowser(browser: string): string | undefined {
     case "opera":
       return "opera";
   }
+}
+
+function coerceToFileUrl(path: string): string {
+  return path.startsWith("file://") ? path : toFileUrl(resolve(path)).href;
 }

@@ -8,7 +8,7 @@
 // @author         nanikit1
 // @grant          GM_setValue
 // @resource       @stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
-// @resource       react            https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource       npm:react        https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // @resource       library2         http://localhost:8080/library2.user.js
 // ==/UserScript==
 

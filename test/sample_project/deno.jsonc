@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "library1": "../../static/library1.user.js"
+  }
+}

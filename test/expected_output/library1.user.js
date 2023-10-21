@@ -11,7 +11,7 @@
 // @resource    @stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
 // @resource    fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
 // @resource    library2        http://localhost:8080/library2.user.js
-// @resource    react           https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource    npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
 // ==/UserScript==
 "use strict";
 

@@ -4,6 +4,7 @@ import { _internals } from "../lib/make_bundle_header.ts";
 import {
   assertEquals,
   basename,
+  copy,
   dirname,
   FakeTime,
   fromFileUrl,
@@ -14,7 +15,7 @@ import {
 const directory = dirname(fromFileUrl(import.meta.url));
 
 const paths = {
-  deps: resolve(directory, "sample_project", "deps.ts"),
+  sampleProject: resolve(directory, "sample_project"),
   example: resolve(directory, "sample_project", "example.user.tsx"),
   library1: resolve(directory, "static", "library1.user.js"),
   library2: resolve(directory, "static", "library2.user.js"),
@@ -104,11 +105,15 @@ Deno.test({
 async function setup() {
   const restoreKy = mockKy();
   const time = new FakeTime("2023-09-01T01:02:03Z");
+
   await prepareInput();
+  const cwd = Deno.cwd();
+  Deno.chdir(paths.tmpInput);
 
   return {
     time,
     restore: () => {
+      Deno.chdir(cwd);
       time.restore();
       restoreKy();
     },
@@ -144,11 +149,10 @@ async function prepareInput() {
   }
 
   const inputDirectory = paths.tmpInput;
-  await Deno.mkdir(inputDirectory, { recursive: true });
+  await copy(paths.sampleProject, inputDirectory);
 
   await Promise.all([
     patchScriptFileUrl(paths, inputDirectory),
-    Deno.copyFile(paths.deps, resolve(inputDirectory, "deps.ts")),
     Deno.copyFile(paths.library1, resolve(inputDirectory, "library1.user.js")),
     Deno.mkdir(paths.tmpOutput),
     prepareSyncDirectory(),

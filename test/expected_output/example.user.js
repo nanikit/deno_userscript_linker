@@ -17,8 +17,8 @@
 // @resource       fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
 // @resource       library1        {{library1}}
 // @resource       library2        http://localhost:8080/library2.user.js
-// @resource       react           https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
-// @resource       react-dom       https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
+// @resource       npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource       npm:react-dom   https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
 // ==/UserScript==
 "use strict";
 
@@ -43,17 +43,17 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var import_library1 = require("library1");
-var import_react = __toESM(require("react"));
+var import_npm_react = __toESM(require("npm:react"));
 var deps_exports = {};
 __reExport(deps_exports, require("@stitches/react"));
-__reExport(deps_exports, require("react-dom"));
-(0, deps_exports.render)( import_react.default.createElement("div", null), document.body);
+__reExport(deps_exports, require("npm:react-dom"));
+(0, deps_exports.render)( import_npm_react.default.createElement("div", null), document.body);
 
 });
 
 define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });
-for (const name of ["@stitches/react", "fflate", "library1", "library2", "react", "react-dom"]) {
+for (const name of ["@stitches/react", "fflate", "library1", "library2", "npm:react", "npm:react-dom"]) {
   const body = GM_getResourceText(name);
   define(name, Function("require", "exports", "module", body));
 }
