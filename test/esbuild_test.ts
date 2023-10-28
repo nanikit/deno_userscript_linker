@@ -1,96 +1,72 @@
-import { ky } from "../lib/deps.ts";
+import { fromFileUrl, join, ky } from "../lib/deps.ts";
 import { run } from "../lib/esbuild_plugin.ts";
 import { _internals } from "../lib/make_bundle_header.ts";
-import {
-  assertEquals,
-  basename,
-  copy,
-  dirname,
-  FakeTime,
-  fromFileUrl,
-  resolve,
-  toFileUrl,
-} from "./deps.ts";
+import { assertEquals, basename, copy, dirname, FakeTime, resolve, toFileUrl } from "./deps.ts";
 
-const directory = dirname(fromFileUrl(import.meta.url));
-
-const paths = {
-  sampleProject: resolve(directory, "sample_project"),
-  example: resolve(directory, "sample_project", "example.user.tsx"),
-  library1: resolve(directory, "static", "library1.user.js"),
-  library2: resolve(directory, "static", "library2.user.js"),
-  expectedExample: resolve(directory, "expected_output", "example.user.js"),
-  expectedLibrary1: resolve(directory, "expected_output", "library1.user.js"),
-  tmp: resolve(directory, "tmp"),
-  tmpInput: resolve(directory, "tmp", "input"),
-  tmpOutput: resolve(directory, "tmp", "output"),
-  tmpSync: resolve(directory, "tmp", "sync"),
-  tmpSyncExample: resolve(directory, "tmp", "sync", "9e61de4e-18b0-46c6-8656-892faae3815b.user.js"),
-  tmpSyncExampleMeta: resolve(
-    directory,
-    "tmp",
-    "sync",
-    "9e61de4e-18b0-46c6-8656-892faae3815b.meta.json",
-  ),
-  actualExample: resolve(directory, "tmp", "output", "example.user.js"),
-  actualLibrary1: resolve(directory, "tmp", "output", "library1.user.js"),
-};
+const dataDirectory = resolve(dirname(fromFileUrl(import.meta.url)), "data");
 
 Deno.test({
   name: "Given example user script",
   fn: async (test) => {
-    const { time, restore } = await setup();
+    const { clone, restore } = await setup(join(dataDirectory, "complex"));
+
+    await Promise.all([
+      patchScriptFileUrl({
+        example: join(clone, "input/file/example.user.tsx"),
+        library1: join(clone, "input/file/library1.user.js"),
+      }),
+      copyForCheckNop(clone),
+      Deno.mkdir(join(clone, "output/build"), { recursive: true }),
+    ]);
 
     await test.step("when build", async (test) => {
       await run([
-        `${paths.tmpInput}/*.user.{tsx,js}`,
-        ...["--output", paths.tmpOutput],
-        ...["--output-sync", paths.tmpSync],
+        `${join(clone, "input/file")}/*.user.{tsx,js}`,
+        ...["--output", join(clone, "output/build")],
+        ...["--output-sync", join(clone, "output/sync")],
       ]);
 
       await test.step({
-        name: "main script should match expectation",
+        name: "build should match expectation",
         fn: async () => {
-          const [actual, template] = await Promise.all([
-            Deno.readTextFile(paths.actualExample),
-            Deno.readTextFile(paths.expectedExample),
-          ]);
-          const expectation = template.replace(
-            "{{library1}}",
-            `${toFileUrl(paths.library1)}`,
+          const examplePath = join(clone, "output/build/example.user.js");
+          const example = await Deno.readTextFile(examplePath);
+          const [, result] = example.match(/@resource.*?(file:\/\/\S+)/)!;
+          await Deno.stat(fromFileUrl(result!));
+
+          // Match with template
+          await Deno.writeTextFile(
+            examplePath,
+            example.replace(/file:\/\/\S+/, "file://library1.user.js"),
           );
-          assertEquals(actual, expectation);
+
+          await assertDirectoryEquals(
+            join(dataDirectory, "complex/output/build"),
+            join(clone, "output/build"),
+          );
         },
       });
 
       await test.step({
-        name: "script 1 should match expectation",
+        name: "sync should match expectation",
         fn: async () => {
-          const [actual, template] = await Promise.all([
-            Deno.readTextFile(paths.actualLibrary1),
-            Deno.readTextFile(paths.expectedLibrary1),
-          ]);
-          const expectation = template.replace(
-            "{{library1}}",
-            `${toFileUrl(paths.library1)}`,
+          const examplePath = join(
+            clone,
+            "output/sync/9e61de4e-18b0-46c6-8656-892faae3815b.user.js",
           );
-          assertEquals(actual, expectation);
-        },
-      });
+          const example = await Deno.readTextFile(examplePath);
+          const [, result] = example.match(/@resource.*?(file:\/\/\S+)/)!;
+          await Deno.stat(fromFileUrl(result!));
 
-      await test.step({
-        name: "sync should contain all built scripts",
-        fn: async () => {
-          const [actualExample, tmpSyncExample, metaJson] = await Promise.all([
-            Deno.readTextFile(paths.actualExample),
-            Deno.readTextFile(paths.tmpSyncExample),
-            Deno.readTextFile(paths.tmpSyncExampleMeta),
-          ]);
+          // Match with template
+          await Deno.writeTextFile(
+            examplePath,
+            example.replace(/file:\/\/\S+/, "file://library1.user.js"),
+          );
 
-          assertEquals(actualExample, tmpSyncExample);
-          assertEquals(
-            metaJson,
-            `{"uuid":"9e61de4e-18b0-46c6-8656-892faae3815b","name":"main userscript","options":{},"lastModified":${time.now}}`,
+          await assertDirectoryEquals(
+            join(dataDirectory, "complex/output/sync"),
+            join(clone, "output/sync"),
           );
         },
       });
@@ -102,30 +78,34 @@ Deno.test({
   sanitizeResources: false,
 });
 
-async function setup() {
-  const restoreKy = mockKy();
+async function setup(project: string) {
+  const restoreKy = mockKy(project);
   const time = new FakeTime("2023-09-01T01:02:03Z");
 
-  await prepareInput();
+  const clone = await cloneDirectory(project);
   const cwd = Deno.cwd();
-  Deno.chdir(paths.tmpInput);
+  Deno.chdir(join(clone, "input"));
 
   return {
     time,
-    restore: () => {
+    clone,
+    restore: async () => {
       Deno.chdir(cwd);
       time.restore();
       restoreKy();
+      await Deno.remove(clone, { recursive: true });
     },
   };
 }
 
-function mockKy() {
+function mockKy(project: string) {
   const kyi = ky.create({
     hooks: {
       beforeRequest: [async (request) => {
-        if (request.url === "http://localhost:8080/library2.user.js") {
-          return new Response(await Deno.readTextFile(paths.library2));
+        if (request.url.startsWith("http://localhost:8080/")) {
+          const relative = new URL(request.url).pathname;
+          const absolute = join(project, "input/http", relative);
+          return new Response(await Deno.readTextFile(absolute));
         }
         return new Response('"mocked"');
       }],
@@ -139,50 +119,70 @@ function mockKy() {
   };
 }
 
-async function prepareInput() {
-  try {
-    await Deno.remove(paths.tmp, { recursive: true });
-  } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) {
-      throw error;
-    }
-  }
+async function copyForCheckNop(clone: string) {
+  await Deno.mkdir(join(clone, "output/sync"), { recursive: true });
 
-  const inputDirectory = paths.tmpInput;
-  await copy(paths.sampleProject, inputDirectory);
-
+  const uuid = "9e61de4e-18b0-46c6-8656-892faae3815b";
   await Promise.all([
-    patchScriptFileUrl(paths, inputDirectory),
-    Deno.copyFile(paths.library1, resolve(inputDirectory, "library1.user.js")),
-    Deno.mkdir(paths.tmpOutput),
-    prepareSyncDirectory(),
-  ]);
-}
-
-async function prepareSyncDirectory() {
-  await Deno.mkdir(paths.tmpSync);
-
-  const uuid = basename(paths.tmpSyncExample, ".user.js");
-  await Promise.all([
-    Deno.copyFile(paths.example, paths.tmpSyncExample),
+    Deno.copyFile(
+      join(dataDirectory, "complex/input/file/example.user.tsx"),
+      join(clone, `output/sync/${uuid}.user.js`),
+    ),
     Deno.writeTextFile(
-      paths.tmpSyncExampleMeta,
+      join(clone, `output/sync/${uuid}.meta.json`),
       `{"uuid":"${uuid}","name":"main userscript","options":{},"lastModified":1693530123000}`,
     ),
   ]);
 }
 
-async function patchScriptFileUrl(
-  paths: { example: string; library1: string },
-  temporaryDirectory: string,
-) {
+async function patchScriptFileUrl(paths: { example: string; library1: string }) {
   const script1 = await Deno.readTextFile(paths.example);
   const patched = script1.replace(
     "file://library1.user.js",
     `${toFileUrl(paths.library1)}`,
   );
-  const patchedPath = resolve(temporaryDirectory, "example.user.tsx");
-  await Deno.writeTextFile(patchedPath, patched);
+  await Deno.writeTextFile(paths.example, patched);
+}
 
-  return patchedPath;
+async function cloneDirectory(original: string) {
+  await Deno.mkdir(resolve(dataDirectory, "tmp"), { recursive: true });
+  const directory = await Deno.makeTempDir({
+    dir: resolve(dataDirectory, "tmp"),
+    prefix: basename(original),
+  });
+  await copy(original, directory, { overwrite: true });
+  return directory;
+}
+
+async function assertDirectoryEquals(actual: string, expected: string) {
+  const [actualFiles, expectedFiles] = await Promise.all([
+    snapshotDirectory(actual),
+    snapshotDirectory(expected),
+  ]);
+  assertEquals(actualFiles, expectedFiles);
+}
+
+// It returns name and file content recursively.
+async function snapshotDirectory(directory: string) {
+  const result = new Map<string, string>();
+
+  const promises = [];
+  for await (const file of Deno.readDir(directory)) {
+    promises.push(insert(file));
+  }
+  await Promise.all(promises);
+
+  return result;
+
+  async function insert(file: Deno.DirEntry) {
+    const path = join(directory, file.name);
+    if (file.isDirectory) {
+      const subResult = await snapshotDirectory(path);
+      for (const [name, content] of subResult) {
+        result.set(join(file.name, name), content);
+      }
+    } else {
+      result.set(file.name, await Deno.readTextFile(path));
+    }
+  }
 }

@@ -6,7 +6,7 @@
   "fmt": {
     "lineWidth": 100
   },
-  "exclude": ["test/tmp", "test/expected_output"],
+  "exclude": ["test/tmp", "test/expected_output", "test/data"],
   "imports": {
     "@stitches/react": "npm:@stitches/react",
     "fflate": "npm:fflate",
