@@ -7,7 +7,7 @@
 // @match          http://unused-ield.space/
 // @author         nanikit2
 // @grant          GM_xmlhttpRequest
-// @resource       fflate https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
+// @resource       link:fflate https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
 // ==/UserScript==
 
 export * from "fflate";

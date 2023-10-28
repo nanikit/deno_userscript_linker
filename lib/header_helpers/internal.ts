@@ -26,9 +26,8 @@ export function renderFooterScript(header: Header) {
 
   return `});
 ${renderGrantModuleDefinition(header)}
-for (const name of ["${getResourceKeys(header).join('", "')}"]) {
-  const body = GM_getResourceText(name);
-  define(name, Function("require", "exports", "module", body));
+for (const { name, content } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
+  define(name.replace("link:", ""), Function("require", "exports", "module", content));
 }
 
 require(["${mainModuleKey}"], () => {}, console.error);`;
@@ -39,8 +38,11 @@ export function isLibraryHeader(mainHeader: Header) {
   return mainHeader["@require"]?.every((x) => !x.match(requireJs)) ?? true;
 }
 
-export function getResourceKeys(header: Header) {
-  return Object.keys(getResourceMap(header));
+export function getLinkResourceKeys(header: Header) {
+  return header["@resource"]?.flatMap((x) => {
+    const key = x.split(/\s+/)?.[0];
+    return key?.startsWith("link:") ? [key] : [];
+  }) ?? [];
 }
 
 function renderGrantModuleDefinition(header: Header) {
@@ -56,12 +58,6 @@ function renderGrantModuleDefinition(header: Header) {
     grants.join(", ")
   } }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });`;
-}
-
-function getResourceMap(header: Header): Record<string, string> {
-  const resourceTable = header["@resource"]?.map((x) => x.split(/\s+/)) ??
-    [];
-  return Object.fromEntries(resourceTable);
 }
 
 function* headerToRows(header: Header) {

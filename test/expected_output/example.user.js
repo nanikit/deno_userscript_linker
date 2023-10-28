@@ -13,12 +13,13 @@
 // @grant          GM_setValue
 // @grant          GM_xmlhttpRequest
 // @require        https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js
-// @resource       @stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
-// @resource       fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
-// @resource       library1        {{library1}}
-// @resource       library2        http://localhost:8080/library2.user.js
-// @resource       npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
-// @resource       npm:react-dom   https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
+// @resource       link:@stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
+// @resource       link:fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
+// @resource       link:library1        {{library1}}
+// @resource       link:library2        http://localhost:8080/library2.user.js
+// @resource       link:npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource       link:npm:react-dom   https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
+// @resource       pure-resource        data:,pure%20resource
 // ==/UserScript==
 "use strict";
 
@@ -53,9 +54,8 @@ __reExport(deps_exports, require("npm:react-dom"));
 
 define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });
-for (const name of ["@stitches/react", "fflate", "library1", "library2", "npm:react", "npm:react-dom"]) {
-  const body = GM_getResourceText(name);
-  define(name, Function("require", "exports", "module", body));
+for (const { name, content } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
+  define(name.replace("link:", ""), Function("require", "exports", "module", content));
 }
 
 require(["main"], () => {}, console.error);

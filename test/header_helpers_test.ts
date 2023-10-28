@@ -212,41 +212,13 @@ Deno.test("Given requirejs script footer renderer", async (test) => {
       "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
     });
 
-    await test.step("it should define it", () => {
+    await test.step("it should import it", () => {
       assertEquals(
         rendered,
         `});
 
-for (const name of ["react"]) {
-  const body = GM_getResourceText(name);
-  define(name, Function("require", "exports", "module", body));
-}
-
-require(["main"], () => {}, console.error);`,
-      );
-    });
-  });
-
-  await test.step("when input application header having grant and dependencies", async (test) => {
-    const rendered = render({
-      "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
-      "@grant": ["GM_setValue", "window.close"],
-      "@resource": [
-        "react https://cdn.jsdelivr.net/npm/react",
-        "react-dom https://cdn.jsdelivr.net/npm/react-dom",
-      ],
-    });
-
-    await test.step("it should define them", () => {
-      assertEquals(
-        rendered,
-        `});
-
-define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_setValue }); });
-requirejs.config({ deps: ["tampermonkey_grants"] });
-for (const name of ["react", "react-dom"]) {
-  const body = GM_getResourceText(name);
-  define(name, Function("require", "exports", "module", body));
+for (const { name, content } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
+  define(name.replace("link:", ""), Function("require", "exports", "module", content));
 }
 
 require(["main"], () => {}, console.error);`,

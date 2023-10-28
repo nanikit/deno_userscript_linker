@@ -10,10 +10,10 @@
 // @author         nanikit
 // @grant          GM_getValue
 // @require        https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js
-// @resource       @stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
-// @resource       npm:react-dom    https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
-// @resource       npm:react        https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
-// @resource       library1         file://library1.user.js
+// @resource       link:@stitches/react  https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
+// @resource       link:npm:react-dom    https://cdn.jsdelivr.net/npm/react-dom@18.2.0/cjs/react-dom.production.min.js
+// @resource       link:npm:react        https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource       link:library1         file://library1.user.js
 // ==/UserScript==
 
 import "library1";

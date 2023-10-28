@@ -10,7 +10,7 @@ import {
   sep,
   toFileUrl,
 } from "./deps.ts";
-import { bundleUserscript, getResourceKeys } from "./header_helpers.ts";
+import { bundleUserscript, getLinkResourceKeys } from "./header_helpers.ts";
 import { mainModuleKey } from "./header_helpers/internal.ts";
 import { collectUserscriptHeaders } from "./make_bundle_header.ts";
 import { SyncMap, writeMetaJson } from "./sync_map.ts";
@@ -33,7 +33,7 @@ export function createPlugin({ syncDirectory }: { syncDirectory?: string } = {})
       initialOptions.external = [
         ...new Set([
           ...(initialOptions.external ?? []),
-          ...imports.flatMap(Object.values).flatMap(getResourceKeys),
+          ...imports.flatMap(Object.values).flatMap(getLinkResourceKeys).map((x) => x.slice(5)),
         ]),
       ];
 

@@ -8,10 +8,11 @@
 // @author      nanikit1
 // @grant       GM_setValue
 // @grant       GM_xmlhttpRequest
-// @resource    @stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
-// @resource    fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
-// @resource    library2        http://localhost:8080/library2.user.js
-// @resource    npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource    link:@stitches/react https://cdn.jsdelivr.net/npm/@stitches/react@1.2.8/dist/index.cjs
+// @resource    link:fflate          https://cdn.jsdelivr.net/npm/fflate@0.7.4/lib/browser.cjs
+// @resource    link:library2        http://localhost:8080/library2.user.js
+// @resource    link:npm:react       https://cdn.jsdelivr.net/npm/react@18.2.0/cjs/react.production.min.js
+// @resource    pure-resource        data:,pure%20resource
 // ==/UserScript==
 "use strict";
 

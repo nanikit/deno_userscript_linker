@@ -6,7 +6,7 @@ import {
   renderFooterScript,
   renderHeaderScript,
 } from "./header_helpers/internal.ts";
-export { getResourceKeys } from "./header_helpers/internal.ts";
+export { getLinkResourceKeys } from "./header_helpers/internal.ts";
 
 export function extractUserscriptHeader(
   code: string,

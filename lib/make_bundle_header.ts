@@ -29,9 +29,10 @@ export async function collectUserscriptHeaders(
   }
 
   const resources = header["@resource"] ?? [];
-  const pairs = resources.map((x) => x.split(/\s+/)) as [string, string][];
+  const pairs = resources.flatMap(getLinkResource);
+
   const headers = await Promise.all(
-    pairs.map(([key, url]) => collectUserscriptHeaders(key, url)),
+    pairs.map(({ key, url }) => collectUserscriptHeaders(key, url)),
   );
   const merged = Object.assign({ [id]: header }, ...headers);
   return merged;
@@ -53,6 +54,12 @@ async function readOrFetch(id: string) {
       return await _internals.ky.get(id).text();
     }
   }
+}
+
+function getLinkResource(resource: string) {
+  const [key, url] = resource.split(/\s+/);
+  const isLinkResource = key && url && key.startsWith("link:");
+  return isLinkResource ? [{ key, url }] : [];
 }
 
 function getSourceKey(path: string): { type: "url" | "file"; path: string } {
