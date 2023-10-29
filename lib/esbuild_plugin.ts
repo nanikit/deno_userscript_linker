@@ -126,7 +126,7 @@ export async function run(args: string[]) {
   const options = {
     allowOverwrite: true,
     bundle: true,
-    charset: "utf8",
+    charset: "ascii",
     target,
     format: "cjs",
     treeShaking: true,
