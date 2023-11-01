@@ -72,7 +72,7 @@ Deno.test({
       });
     });
 
-    restore();
+    await restore();
   },
   sanitizeOps: false,
   sanitizeResources: false,
@@ -101,14 +101,16 @@ async function setup(project: string) {
 function mockKy(project: string) {
   const kyi = ky.create({
     hooks: {
-      beforeRequest: [async (request) => {
-        if (request.url.startsWith("http://localhost:8080/")) {
-          const relative = new URL(request.url).pathname;
-          const absolute = join(project, "input/http", relative);
-          return new Response(await Deno.readTextFile(absolute));
-        }
-        return new Response('"mocked"');
-      }],
+      beforeRequest: [
+        async (request) => {
+          if (request.url.startsWith("http://localhost:8080/")) {
+            const relative = new URL(request.url).pathname;
+            const absolute = join(project, "input/http", relative);
+            return new Response(await Deno.readTextFile(absolute));
+          }
+          return new Response('"mocked"');
+        },
+      ],
     },
   });
   const originalKy = _internals.ky;
@@ -137,10 +139,7 @@ async function copyForCheckNop(clone: string) {
 
 async function patchScriptFileUrl(paths: { example: string; library1: string }) {
   const script1 = await Deno.readTextFile(paths.example);
-  const patched = script1.replace(
-    "file://library1.user.js",
-    `${toFileUrl(paths.library1)}`,
-  );
+  const patched = script1.replace("file://library1.user.js", `${toFileUrl(paths.library1)}`);
   await Deno.writeTextFile(paths.example, patched);
 }
 

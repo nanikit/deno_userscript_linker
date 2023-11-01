@@ -54,8 +54,8 @@ __reExport(deps_exports, require("npm:react-dom"));
 
 define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });
-for (const { name, content } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
-  define(name.replace("link:", ""), Function("require", "exports", "module", content));
+for (const { name } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
+  define(name.replace("link:", ""), Function("require", "exports", "module", GM_getResourceText(name)));
 }
 
 require(["main"], () => {}, console.error);

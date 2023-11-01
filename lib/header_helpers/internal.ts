@@ -26,8 +26,8 @@ export function renderFooterScript(header: Header) {
 
   return `});
 ${renderGrantModuleDefinition(header)}
-for (const { name, content } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
-  define(name.replace("link:", ""), Function("require", "exports", "module", content));
+for (const { name } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
+  define(name.replace("link:", ""), Function("require", "exports", "module", GM_getResourceText(name)));
 }
 
 require(["${mainModuleKey}"], () => {}, console.error);`;
