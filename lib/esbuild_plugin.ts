@@ -5,9 +5,9 @@ import {
   exists,
   expandGlob,
   loadDotEnv,
-  parse,
+  parseArgs,
   resolve,
-  sep,
+  SEPARATOR,
   toFileUrl,
 } from "./deps.ts";
 import { bundleUserscript, getLinkResourceKeys } from "./header_helpers.ts";
@@ -80,7 +80,7 @@ async function addHeader(
     syncMap?: SyncMap | null;
   },
 ) {
-  const slashPath = output.path.replaceAll(sep, "/");
+  const slashPath = output.path.replaceAll(SEPARATOR, "/");
   const [relative, meta] = Object.entries(metadata).find((x) => slashPath.endsWith(x[0])) ?? [];
   if (!relative || !meta?.entryPoint) {
     return;
@@ -195,7 +195,7 @@ async function getCommandParameters(args: string[]) {
     ...Deno.env.toObject(),
   };
 
-  const { _: globs, "output-sync": outputSync, "deno-json": denoJson, ...rest } = parse(args, {
+  const { _: globs, "output-sync": outputSync, "deno-json": denoJson, ...rest } = parseArgs(args, {
     boolean: ["watch", "help"],
     string: ["inject", "output", "output-sync", "deno-json"],
     alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help" },
