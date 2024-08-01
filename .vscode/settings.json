@@ -1,9 +1,6 @@
 {
   "deno.enable": true,
-  "deno.unstable": true,
   "deno.lint": true,
-  "typescript.validate.enable": false,
-  "javascript.validate.enable": false,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },

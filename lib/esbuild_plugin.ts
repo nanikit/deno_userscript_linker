@@ -111,7 +111,7 @@ async function writeFileAndLog(
 
 export async function run(args: string[]) {
   const parameters = await getCommandParameters(args);
-  const { globs, inject, watch, output, outputSync, help, denoJson } = parameters;
+  const { globs, inject, watch, output, outputSync, help, denoJson, defineEnvPath } = parameters;
   if (help) {
     printHelp();
     return;
@@ -122,11 +122,13 @@ export async function run(args: string[]) {
   const target = convertBrowsersList(defaultTarget);
   const injectUrls = inject?.map(coerceToFileUrl);
   const configPath = denoJson ?? await findDenoJson();
+  const define = defineEnvPath ? await loadDotEnv({ envPath: defineEnvPath }) : undefined;
 
   const options = {
     allowOverwrite: true,
     bundle: true,
     charset: "utf8",
+    define,
     target,
     format: "cjs",
     treeShaking: true,
@@ -168,6 +170,7 @@ Options:
   -s, --output-sync      TamperDAV sync directory
   -d, --deno-json        Path to deno.jsonc
   -i, --inject           Inject code, see https://esbuild.github.io/api/#inject
+  -e, --define           esbuild define env file (https://esbuild.github.io/api/#define)
   -h, --help             Show help
 
 Environment variables (supports .env):
@@ -195,15 +198,22 @@ async function getCommandParameters(args: string[]) {
     ...Deno.env.toObject(),
   };
 
-  const { _: globs, "output-sync": outputSync, "deno-json": denoJson, ...rest } = parseArgs(args, {
+  const {
+    _: globs,
+    "output-sync": outputSync,
+    "deno-json": denoJson,
+    define: defineEnvPath,
+    ...rest
+  } = parseArgs(args, {
     boolean: ["watch", "help"],
-    string: ["inject", "output", "output-sync", "deno-json"],
-    alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help" },
+    string: ["inject", "output", "output-sync", "deno-json", "define"],
+    alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help", "e": "define" },
     default: { watch: false, lib: false },
     collect: ["inject"],
   });
   return {
     ...rest,
+    defineEnvPath,
     outputSync: outputSync ?? env.OUTPUT_SYNC,
     denoJson: denoJson ?? env.DENO_JSON,
     globs: globs.map((x) => `${x}`),
