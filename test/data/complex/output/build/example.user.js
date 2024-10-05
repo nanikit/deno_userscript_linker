@@ -8,7 +8,7 @@
 // @exclude        *
 // @match          http://unused-field.space/
 // @author         nanikit
-// @grant          GM_getResourceText
+// @grant          GM.getResourceText
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_xmlhttpRequest
@@ -52,10 +52,15 @@ __reExport(deps_exports, require("npm:react-dom"));
 
 });
 
-define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getResourceText, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
+define("tampermonkey_grants", function() { Object.assign(this.window, { GM, GM_getValue, GM_setValue, GM_xmlhttpRequest }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });
-for (const { name } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
-  define(name.replace("link:", ""), Function("require", "exports", "module", GM_getResourceText(name)));
-}
+load()
 
-require(["main"], () => {}, console.error);
+async function load() {
+  const links = GM.info.script.resources.filter(x => x.name.startsWith("link:"));
+  await Promise.all(links.map(async ({ name }) => {
+    const script = await GM.getResourceText(name)
+    define(name.replace("link:", ""), Function("require", "exports", "module", script))
+  }));
+  require(["main"], () => {}, console.error);
+}

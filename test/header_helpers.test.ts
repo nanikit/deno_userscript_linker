@@ -161,6 +161,7 @@ Deno.test("Given requirejs script header renderer", async (test) => {
   await test.step("when input application header with no dependency", async (test) => {
     const rendered = render({
       "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
+      "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
       "@grant": ["GM_setValue"],
     });
 
@@ -172,7 +173,7 @@ Deno.test("Given requirejs script header renderer", async (test) => {
   await test.step("when input application header with dependency", async (test) => {
     const rendered = render({
       "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
-      "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
+      "@resource": ["link:react https://cdn.jsdelivr.net/npm/react"],
     });
 
     await test.step("it should return define snippet", () => {
@@ -198,6 +199,7 @@ Deno.test("Given requirejs script footer renderer", async (test) => {
   await test.step("when input application header with no dependency", async (test) => {
     const rendered = render({
       "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
+      "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
       "@grant": ["GM_setValue"],
     });
 
@@ -209,7 +211,7 @@ Deno.test("Given requirejs script footer renderer", async (test) => {
   await test.step("when input application header having a dependency", async (test) => {
     const rendered = render({
       "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
-      "@resource": ["react https://cdn.jsdelivr.net/npm/react"],
+      "@resource": ["link:react https://cdn.jsdelivr.net/npm/react"],
     });
 
     await test.step("it should import it", () => {
@@ -217,11 +219,44 @@ Deno.test("Given requirejs script footer renderer", async (test) => {
         rendered,
         `});
 
-for (const { name } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
-  define(name.replace("link:", ""), Function("require", "exports", "module", GM_getResourceText(name)));
-}
+load()
 
-require(["main"], () => {}, console.error);`,
+async function load() {
+  const links = GM.info.script.resources.filter(x => x.name.startsWith("link:"));
+  await Promise.all(links.map(async ({ name }) => {
+    const script = await GM.getResourceText(name)
+    define(name.replace("link:", ""), Function("require", "exports", "module", script))
+  }));
+  require(["main"], () => {}, console.error);
+}`,
+      );
+    });
+  });
+
+  await test.step("when input application header having grant and dependency", async (test) => {
+    const rendered = render({
+      "@require": ["https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.js"],
+      "@resource": ["link:react https://cdn.jsdelivr.net/npm/react"],
+      "@grant": ["GM.setValue"],
+    });
+
+    await test.step("it should import it", () => {
+      assertEquals(
+        rendered,
+        `});
+
+define("tampermonkey_grants", function() { Object.assign(this.window, { GM }); });
+requirejs.config({ deps: ["tampermonkey_grants"] });
+load()
+
+async function load() {
+  const links = GM.info.script.resources.filter(x => x.name.startsWith("link:"));
+  await Promise.all(links.map(async ({ name }) => {
+    const script = await GM.getResourceText(name)
+    define(name.replace("link:", ""), Function("require", "exports", "module", script))
+  }));
+  require(["main"], () => {}, console.error);
+}`,
       );
     });
   });

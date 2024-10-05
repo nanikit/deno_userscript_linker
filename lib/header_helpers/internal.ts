@@ -13,24 +13,29 @@ export function renderHeaderScript(headers: Header) {
     return "";
   }
 
-  if (!headers["@resource"]?.length) {
+  if (!hasLinkResource(headers)) {
     return "";
   }
   return `define("${mainModuleKey}", (require, exports, module) => {`;
 }
 
 export function renderFooterScript(header: Header) {
-  if (isLibraryHeader(header) || !header["@resource"]?.length) {
+  if (isLibraryHeader(header) || !hasLinkResource(header)) {
     return "";
   }
 
   return `});
 ${renderGrantModuleDefinition(header)}
-for (const { name } of GM.info.script.resources.filter(x => x.name.startsWith("link:"))) {
-  define(name.replace("link:", ""), Function("require", "exports", "module", GM_getResourceText(name)));
-}
+load()
 
-require(["${mainModuleKey}"], () => {}, console.error);`;
+async function load() {
+  const links = GM.info.script.resources.filter(x => x.name.startsWith("link:"));
+  await Promise.all(links.map(async ({ name }) => {
+    const script = await GM.getResourceText(name)
+    define(name.replace("link:", ""), Function("require", "exports", "module", script))
+  }));
+  require(["${mainModuleKey}"], () => {}, console.error);
+}`;
 }
 
 export function isLibraryHeader(mainHeader: Header) {
@@ -46,16 +51,17 @@ export function getLinkResourceKeys(header: Header) {
 }
 
 function renderGrantModuleDefinition(header: Header) {
-  if (!header["@grant"]?.length) {
+  const grants = header["@grant"] ?? [];
+  if (!grants.length) {
     return "";
   }
 
-  let grants = header["@grant"].filter((x) => !x.includes("."));
-  if (grants.some((x) => x.startsWith("GM_"))) {
-    grants = ["GM", ...grants];
+  const grantIds = grants.filter((x) => !x.includes("."));
+  if (grants.some((x) => /^GM[_.]/.test(x))) {
+    grantIds.unshift("GM");
   }
   return `\ndefine("${grantsModuleKey}", function() { Object.assign(this.window, { ${
-    grants.join(", ")
+    grantIds.join(", ")
   } }); });
 requirejs.config({ deps: ["tampermonkey_grants"] });`;
 }
@@ -90,4 +96,8 @@ function headerKeyOrder(name: string) {
     default:
       return 0;
   }
+}
+
+function hasLinkResource(header: Header) {
+  return header["@resource"]?.some((x) => x.startsWith("link:"));
 }

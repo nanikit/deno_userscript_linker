@@ -90,7 +90,7 @@ function mergeAndSort(a?: string[], b?: string[]) {
 }
 
 function insertRequireJsRequirements(header: Header) {
-  return mergeHeader(header, { "@grant": ["GM_getResourceText"] });
+  return mergeHeader(header, { "@grant": ["GM.getResourceText"] });
 }
 
 function removeComment(code: string) {
