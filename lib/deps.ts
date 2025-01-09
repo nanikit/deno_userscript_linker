@@ -4,6 +4,7 @@ export { load as loadDotEnv } from "jsr:@std/dotenv";
 export { exists, expandGlob } from "jsr:@std/fs";
 export * from "jsr:@std/path";
 export { default as browserslist } from "npm:browserslist";
+export { solidPlugin } from "npm:esbuild-plugin-solid";
 export * as esbuild from "npm:esbuild@0.24.0";
 export type * from "npm:ky";
 export { default as ky } from "npm:ky";

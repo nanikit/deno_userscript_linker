@@ -8,6 +8,7 @@ import {
   parseArgs,
   resolve,
   SEPARATOR,
+  solidPlugin,
   toFileUrl,
 } from "./deps.ts";
 import { bundleUserscript, getLinkResourceKeys } from "./header_helpers.ts";
@@ -111,7 +112,8 @@ async function writeFileAndLog(
 
 export async function run(args: string[]) {
   const parameters = await getCommandParameters(args);
-  const { globs, inject, watch, output, outputSync, help, denoJson, defineEnvPath } = parameters;
+  const { globs, inject, watch, output, outputSync, help, denoJson, defineEnvPath, plugins } =
+    parameters;
   if (help) {
     printHelp();
     return;
@@ -137,6 +139,9 @@ export async function run(args: string[]) {
     inject: injectUrls,
     plugins: [
       createPlugin({ syncDirectory: outputSync }),
+      ...(plugins?.includes("solid")
+        ? [solidPlugin({ solid: { moduleName: "npm:solid-js/web" } })]
+        : []),
       ...denoPlugins({ configPath }),
     ],
   } as esbuild.BuildOptions;
@@ -169,6 +174,7 @@ Options:
   -o, --output           Output directory or file name
   -s, --output-sync      TamperDAV sync directory
   -d, --deno-json        Path to deno.jsonc
+  -p, --plugins [solid]  esbuild plugins (only for esbuild-plugin-solid)
   -i, --inject           Inject code, see https://esbuild.github.io/api/#inject
   -e, --define           esbuild define env file (https://esbuild.github.io/api/#define)
   -h, --help             Show help
@@ -206,8 +212,15 @@ async function getCommandParameters(args: string[]) {
     ...rest
   } = parseArgs(args, {
     boolean: ["watch", "help"],
-    string: ["inject", "output", "output-sync", "deno-json", "define"],
-    alias: { "w": "watch", "o": "output", "s": "output-sync", "h": "help", "e": "define" },
+    string: ["inject", "output", "output-sync", "deno-json", "define", "plugins"],
+    alias: {
+      "w": "watch",
+      "o": "output",
+      "s": "output-sync",
+      "h": "help",
+      "e": "define",
+      "p": "plugins",
+    },
     default: { watch: false, lib: false },
     collect: ["inject"],
   });
