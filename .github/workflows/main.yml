@@ -18,22 +18,13 @@ jobs:
   check-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
 
-      - name: Setup deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
-
-      - name: Verify formatting
-        run: deno fmt --check
-
-      - name: Run linter
-        run: deno lint
-
-      - name: Check
-        run: deno check mod.ts
+      - run: deno fmt --check
+      - run: deno lint
+      - run: deno check mod.ts
+      - run: deno test --allow-all
 
       - name: Push to main
         if: ${{ github.event_name == 'push' }}
