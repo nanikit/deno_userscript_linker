@@ -1,4 +1,4 @@
-export { denoPlugins } from "https://raw.githubusercontent.com/nanikit/esbuild_deno_loader/43017e9af634b98f374c796280a4966a2c9fe382/mod.ts";
+export { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
 export { parseArgs } from "jsr:@std/cli";
 export { load as loadDotEnv } from "jsr:@std/dotenv";
 export { exists, expandGlob } from "jsr:@std/fs";

@@ -4,7 +4,7 @@ import { assertEquals, copy, dirname, FakeTime, fromFileUrl, join, ky, resolve }
 export const dataDirectory = resolve(dirname(fromFileUrl(import.meta.url)), "data");
 
 export async function setup(projectName: string) {
-  const time = new FakeTime("2023-09-01T01:02:03Z");
+  const time = new FakeTime("2023-09-01T01:02:03Z", { advanceRate: 1, advanceFrequency: 200 });
   const cwd = Deno.cwd();
 
   const tmp = await Deno.makeTempDir({ prefix: projectName });
