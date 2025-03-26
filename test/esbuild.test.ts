@@ -1,6 +1,7 @@
+import { expect } from "jsr:@std/expect";
 import { join } from "../lib/deps.ts";
 import { run } from "../lib/esbuild_plugin.ts";
-import { assertDirectoryEquals, mockKy, setup } from "./commons.ts";
+import { assertDirectoryEquals, mockKy, setup, snapshotDirectory } from "./commons.ts";
 import { toFileUrl } from "./deps.ts";
 
 Deno.test({
@@ -40,20 +41,36 @@ Deno.test({
         },
       });
 
-      await test.step({
-        name: "sync should match expectation",
-        fn: async () => {
-          const examplePath = join(tmpOutput, "sync/9e61de4e-18b0-46c6-8656-892faae3815b.user.js");
-          const example = await Deno.readTextFile(examplePath);
+      const actual = await snapshotDirectory(join(tmpOutput, "sync"));
+      const expected = await snapshotDirectory(join(output, "sync"));
 
-          // Match with template
-          await Deno.writeTextFile(
-            examplePath,
-            example.replace(/file:\/\/\S+/, "file://library1.user.js"),
-          );
+      const meta1 = "9e61de4e-18b0-46c6-8656-892faae3815b.meta.json";
+      const meta2 = "40599f6c-6b7d-40a1-b899-7742ee692913.meta.json";
 
-          await assertDirectoryEquals(join(tmpOutput, "sync"), join(output, "sync"));
-        },
+      await test.step("sync should match expectation", () => {
+        const js1 = "9e61de4e-18b0-46c6-8656-892faae3815b.user.js";
+        const js2 = "40599f6c-6b7d-40a1-b899-7742ee692913.user.js";
+
+        expect(actual.get(js1)?.replace(/file:\/\/\S+/, "file://library1.user.js")).toEqual(
+          expected.get(js1),
+        );
+        expect(actual.get(js2)).toEqual(expected.get(js2));
+
+        // timestamp is irritating.
+        expect(actual.get(meta1)?.replace(/"lastModified":\d+/, '"lastModified":0')).toEqual(
+          expected.get(meta1),
+        );
+        expect(actual.get(meta2)?.replace(/"lastModified":\d+/, '"lastModified":0')).toEqual(
+          expected.get(meta2),
+        );
+      });
+
+      await test.step("timestamp should be changed", () => {
+        // timestamp is irritating.
+        expect(actual.get(meta1)?.match(/"lastModified":(\d+)/)?.[1]).toBeTruthy();
+        expect(actual.get(meta1)?.match(/"lastModified":(\d+)/)?.[1]).not.toEqual("0");
+        expect(actual.get(meta2)?.match(/"lastModified":(\d+)/)?.[1]).toBeTruthy();
+        expect(actual.get(meta2)?.match(/"lastModified":(\d+)/)?.[1]).not.toEqual("0");
       });
     });
 
