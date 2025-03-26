@@ -19,7 +19,7 @@ Deno.test({
       await test.step({
         name: "it should match expectation",
         fn: async () => {
-          await assertDirectoryEquals(output, tmpOutput);
+          await assertDirectoryEquals(tmpOutput, output);
         },
       });
     });

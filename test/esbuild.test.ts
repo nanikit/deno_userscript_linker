@@ -36,7 +36,7 @@ Deno.test({
             example.replace(/file:\/\/\S+/, "file://library1.user.js"),
           );
 
-          await assertDirectoryEquals(join(output, "build"), join(tmpOutput, "build"));
+          await assertDirectoryEquals(join(tmpOutput, "build"), join(output, "build"));
         },
       });
 
@@ -52,7 +52,7 @@ Deno.test({
             example.replace(/file:\/\/\S+/, "file://library1.user.js"),
           );
 
-          await assertDirectoryEquals(join(output, "sync"), join(tmpOutput, "sync"));
+          await assertDirectoryEquals(join(tmpOutput, "sync"), join(output, "sync"));
         },
       });
     });
