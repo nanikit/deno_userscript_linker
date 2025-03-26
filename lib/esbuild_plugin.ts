@@ -60,15 +60,9 @@ async function amendUserscripts(
   if (!outputs || !outputsMeta) {
     return;
   }
+
   await Promise.all(
-    outputs.map((output) =>
-      addHeader({
-        metadata: outputsMeta,
-        output,
-        initialWrite,
-        syncMap,
-      })
-    ),
+    outputs.map((output) => addHeader({ metadata: outputsMeta, output, initialWrite, syncMap })),
   );
 }
 
@@ -81,13 +75,20 @@ async function addHeader(
   },
 ) {
   const slashPath = output.path.replaceAll(SEPARATOR, "/");
-  const [relative, meta] = Object.entries(metadata).find((x) => slashPath.endsWith(x[0])) ?? [];
+
+  // esbuild metadata key is absolute path on windows.
+  // on linux, it's relative path to common root.
+  function areSame(metadataKey: string) {
+    return slashPath.endsWith(metadataKey) || metadataKey.endsWith(slashPath);
+  }
+
+  const [relative, meta] = Object.entries(metadata).find((x) => areSame(x[0])) ?? [];
   if (!relative || !meta?.entryPoint) {
     return;
   }
 
-  const base = slashPath.replace(relative, "");
-  const entryPoint = resolve(base, meta.entryPoint);
+  // meta.entryPoint on linux: '../../tmp/complex6976467249475bc0/input/file/library1.user.js'
+  const entryPoint = meta.entryPoint.replace(/^(\.\.\/)+/, "/");
   const headers = await collectUserscriptHeaders(mainModuleKey, entryPoint);
   const script = bundleUserscript(output.text, headers);
   output.contents = new TextEncoder().encode(script);
@@ -140,13 +141,14 @@ export async function run(args: string[]) {
       ...denoPlugins({ configPath }),
     ],
   } as esbuild.BuildOptions;
-  const context = await esbuild.context(options);
+
   if (watch) {
+    const context = await esbuild.context(options);
     await context.watch();
   } else {
-    await context.rebuild();
-    await context.dispose();
+    await esbuild.build(options);
   }
+  await esbuild.stop();
 }
 
 async function findDenoJson() {
